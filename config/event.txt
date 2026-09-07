@@ -1,0 +1,14 @@
+event = {
+    "name": "SuedKultur Music-Night",
+    "start": "17:15 Uhr",
+    "price": "7,50 €",
+    "location": "ligeti zentrum",
+    "genres": [
+        "Improvisation",
+        "Avantgarde-Pop",
+        "Jazz",
+        "Irish Folk",
+        "Elektronik",
+    ],
+    "special": "Jam-Session",
+}

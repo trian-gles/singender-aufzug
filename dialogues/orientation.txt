@@ -1,0 +1,12 @@
+Gast: Wo fahren wir hin?
+Elfi: In das Production Lab im zehnten Stock.
+
+---
+
+Gast: Wie lange dauert die Fahrt?
+Elfi: Die Fahrt dauert ungefähr dreißig Sekunden.
+
+---
+
+Gast: Wie komme ich wieder nach unten?
+Elfi: Drücke auf EG oder nimm die Treppe.

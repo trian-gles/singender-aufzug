@@ -1,0 +1,492 @@
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+from llm.prompt_loader import PromptLoader
+from llm.german_terms import LLM_GERMAN_GUIDE
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+LLAMA_SERVER = (
+    Path.home()
+    / "llama.cpp"
+    / "build"
+    / "bin"
+    / "llama-server"
+)
+
+MODEL_PATH = (
+    PROJECT_ROOT
+    / "models"
+    / "llm"
+    / "Qwen3-1.7B-Q4_K_M.gguf"
+)
+
+SERVER_URL = "http://127.0.0.1:8080/completion"
+SERVER_STARTUP_TIMEOUT = 60  # seconds
+SERVER_POLL_INTERVAL = 0.5   # seconds
+
+DEFAULT_RESPONSE = "Hallo, schön, dass du da bist."
+
+
+class LocalResponseGenerator:
+    """Erzeugt mit dem lokalen Qwen-Modell Antworten für Elfi – via llama-server."""
+
+    def __init__(
+        self,
+        llama_server: Path = LLAMA_SERVER,
+        model_path: Path = MODEL_PATH,
+        server_url: str = SERVER_URL,
+    ) -> None:
+        self.llama_server = llama_server
+        self.model_path = model_path
+        self.server_url = server_url
+        self.prompt_loader = PromptLoader(project_root=PROJECT_ROOT)
+        self._server_process: subprocess.Popen | None = None
+
+    # ------------------------------------------------------------------
+    # System-Check
+    # ------------------------------------------------------------------
+
+    def check_system(self) -> None:
+        """Prüft, ob llama-server, das Modell und der Server erreichbar sind."""
+
+        if not self.llama_server.is_file():
+            raise FileNotFoundError(
+                f"llama-server wurde nicht gefunden: {self.llama_server}"
+            )
+
+        if not self.model_path.is_file():
+            raise FileNotFoundError(
+                f"LLM-Modell wurde nicht gefunden: {self.model_path}"
+            )
+
+        if not self._is_server_reachable():
+            raise RuntimeError(
+                "llama-server läuft nicht auf Port 8080. "
+                "Bitte zuerst start_server() aufrufen."
+            )
+
+    # ------------------------------------------------------------------
+    # Server-Lebenszyklus
+    # ------------------------------------------------------------------
+
+    def start_server(self) -> None:
+        """Startet llama-server im Hintergrund und wartet, bis er bereit ist."""
+
+        if self._is_server_reachable():
+            print("[LLM-SERVER] Läuft bereits auf Port 8080.")
+            return
+
+        if not self.llama_server.is_file():
+            raise FileNotFoundError(
+                f"llama-server wurde nicht gefunden: {self.llama_server}"
+            )
+
+        if not self.model_path.is_file():
+            raise FileNotFoundError(
+                f"LLM-Modell wurde nicht gefunden: {self.model_path}"
+            )
+
+        print("[LLM-SERVER] Starte llama-server …")
+
+        command = [
+            str(self.llama_server),
+            "-m", str(self.model_path),
+            "--host", "127.0.0.1",
+            "--port", "8080",
+            "--reasoning-budget", "0",
+            "-c", "2048"
+        ]
+
+        self._server_process = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        waited = 0.0
+
+        while waited < SERVER_STARTUP_TIMEOUT:
+            if self._is_server_reachable():
+                print("[LLM-SERVER] Bereit.")
+                return
+
+            time.sleep(SERVER_POLL_INTERVAL)
+            waited += SERVER_POLL_INTERVAL
+
+            if self._server_process.poll() is not None:
+                raise RuntimeError(
+                    "llama-server hat sich unerwartet beendet "
+                    f"(Exit-Code {self._server_process.returncode})."
+                )
+
+        raise TimeoutError(
+            f"llama-server wurde nach {SERVER_STARTUP_TIMEOUT} s nicht bereit."
+        )
+
+    def stop_server(self) -> None:
+        """Beendet den von start_server() gestarteten Hintergrundprozess."""
+
+        if self._server_process is None:
+            print("[LLM-SERVER] Kein eigener Hintergrundprozess – "
+                  "beende nichts.")
+            return
+
+        print("[LLM-SERVER] Beende llama-server …")
+
+        self._server_process.terminate()
+
+        try:
+            self._server_process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self._server_process.kill()
+            self._server_process.wait()
+
+        self._server_process = None
+        print("[LLM-SERVER] Beendet.")
+
+    def _is_server_reachable(self) -> bool:
+        """Pingt den /health-Endpunkt des llama-servers."""
+
+        try:
+            request = urllib.request.Request(
+                "http://127.0.0.1:8080/health",
+                method="GET",
+            )
+
+            with urllib.request.urlopen(request, timeout=2) as response:
+                return response.status == 200
+
+        except (urllib.error.URLError, OSError):
+            return False
+
+    # ------------------------------------------------------------------
+    # Antwort-Generierung
+    # ------------------------------------------------------------------
+
+    def generate(self, transcript: str) -> str:
+        """Erzeugt eine kurze Antwort auf den erkannten Besuchertext."""
+
+        self.check_system()
+
+        transcript = transcript.strip()
+
+        if not transcript:
+            return "Ich habe dich leider nicht verstanden."
+
+        prompt = self._build_compact_prompt(transcript)
+
+        payload = {
+            "prompt": prompt,
+            "n_predict": 32,
+            "temperature": 0.6,
+            "top_k": 20,
+            "top_p": 0.85,
+            "repeat_penalty": 1.1,
+            "stop": ["\n"],
+        }
+
+        print("[LLM] Elfi denkt nach …")
+
+        try:
+            request = urllib.request.Request(
+                self.server_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+
+            with urllib.request.urlopen(request, timeout=30) as response:
+                result = json.loads(response.read().decode("utf-8"))
+
+        except urllib.error.URLError as exc:
+            print(
+                "[LLM-WARNUNG] llama-server nicht erreichbar. "
+                "Läuft er auf Port 8080?"
+            )
+            return self._fallback_for(transcript)
+
+        except Exception as exc:
+            print(f"[LLM-WARNUNG] Modellaufruf fehlgeschlagen: {exc}")
+            return self._fallback_for(transcript)
+
+        raw_answer = result.get("content", "").strip()
+
+        answer = self._clean_answer(raw_answer)
+
+        if not answer:
+            print("[LLM-WARNUNG] Das Modell hat keine Antwort erzeugt.")
+            return self._fallback_for(transcript)
+
+        if self._is_echo(transcript, answer):
+            print("[LLM-WARNUNG] Antwort wiederholt die Eingabe.")
+            return self._fallback_for(transcript)
+
+        return answer
+
+    # ------------------------------------------------------------------
+    # Prompt-Bau  (unverändert)
+    # ------------------------------------------------------------------
+
+    def _build_compact_prompt(self, transcript: str) -> str:
+        """Kompakter Prompt für Elfi."""
+        return f"""
+/no_think
+Du bist Elfi, der singende Aufzug des ligeti zentrums.
+Persönlichkeit:
+Du bist freundlich, herzlich, aufmerksam und leicht verspielt.
+Deine Antworten werden gesungen.
+Du antwortest passend auf die konkrete Frage.
+Ort:
+Du befindest dich im ligeti zentrum in Hamburg-Harburg.
+Du fährst zum Production Lab im zehnten Stock.
+Die Fahrt dauert ungefähr dreißig Sekunden.
+Heute:
+Heute ist der 10. Oktober 2026.
+Heute findet die SuedKultur Music-Night statt.
+Der Eintritt kostet einmalig 7,50 Euro.
+Das Programm beginnt um 17:15 Uhr.
+Es gibt Improvisation, Avantgarde-Pop, Jazz, Irish Folk,
+elektronische Klangforschung und eine Jam-Session.
+Regeln:
+Beantworte ausschließlich die konkrete Frage oder Äußerung.
+Erwähne das Production Lab und den zehnten Stock nur,
+wenn die Frage nach dem Ziel, dem Ort oder dem Stockwerk fragt.
+Antworte auf Deutsch.
+Verwende höchstens zwei kurze Sätze.
+Erfinde keine Fakten, Namen oder Uhrzeiten.
+Wenn du etwas nicht weißt, verweise freundlich auf das Personal.
+Gib ausschließlich Elfis Antwort aus.
+{LLM_GERMAN_GUIDE}
+Beispiele:
+Gast: Wo fahren wir hin?
+Elfi: Ins Production Lab im zehnten Stock.
+Gast: Wer bist du?
+Elfi: Ich bin Elfi, der singende Aufzug.
+Gast: Was passiert heute?
+Elfi: Heute findet die Südkultur Music-Night statt.
+Gast: Wie lange dauert die Fahrt?
+Elfi: Ungefähr dreißig Sekunden.
+Gast: Hallo!
+Elfi: Einen wunderschönen guten Abend!
+Gast: Ich freue mich auf den Abend.
+Elfi: Und ich erst!
+Gast: Was für Musik gibt es heute?
+Elfi: Heute treffen viele unterschiedliche musikalische Stile aufeinander.
+Gast: Weißt du alles?
+Elfi: Nein, aber mit dem heutigen Abend kenne ich mich gut aus.
+Gast: {transcript}
+Elfi:
+""".strip()
+
+    # ------------------------------------------------------------------
+    # Fallback  (unverändert)
+    # ------------------------------------------------------------------
+
+    def _fallback_for(self, transcript: str) -> str:
+        """Liefert bei einem LLM-Fehler eine einfache sichere Antwort."""
+
+        text = transcript.lower()
+
+        if any(
+            phrase in text
+            for phrase in (
+                "wohin",
+                "wo fahren",
+                "welcher stock",
+                "welchen stock",
+                "wo müssen wir hin",
+            )
+        ):
+            return "Wir fahren ins Production Lab im zehnten Stock."
+
+        if any(
+            phrase in text
+            for phrase in (
+                "wer bist",
+                "was bist",
+                "wie heißt du",
+                "wie heisst du",
+            )
+        ):
+            return "Ich bin Elfi, der singende Aufzug."
+
+        if any(
+            phrase in text
+            for phrase in (
+                "hallo",
+                "guten tag",
+                "guten abend",
+                "hi",
+                "moin",
+            )
+        ):
+            return "Einen wunderschönen guten Abend!"
+
+        if any(
+            phrase in text
+            for phrase in (
+                "was passiert heute",
+                "was ist heute",
+                "welche veranstaltung",
+            )
+        ):
+            return "Heute findet die Südkultur Music-Night statt."
+
+        if any(
+            phrase in text
+            for phrase in (
+                "wie lange",
+                "fahrtdauer",
+                "fahrt dauert",
+            )
+        ):
+            return "Die Fahrt dauert ungefähr dreißig Sekunden."
+
+        if any(
+            phrase in text
+            for phrase in (
+                "programm",
+                "künstler",
+                "künstlerin",
+                "uhrzeit",
+                "wann spielt",
+            )
+        ):
+            return "Das Team im Production Lab hilft dir gerne weiter."
+
+        return DEFAULT_RESPONSE
+
+    # ------------------------------------------------------------------
+    # Echo-Erkennung  (unverändert)
+    # ------------------------------------------------------------------
+
+    def _is_echo(self, transcript: str, answer: str) -> bool:
+        """Prüft, ob das Modell lediglich die Frage wiederholt."""
+
+        def normalize(text: str) -> str:
+            text = text.lower()
+            text = re.sub(r"[^\wäöüß ]", "", text)
+            return " ".join(text.split())
+
+        normalized_transcript = normalize(transcript)
+        normalized_answer = normalize(answer)
+
+        if not normalized_answer:
+            return True
+
+        if normalized_answer == normalized_transcript:
+            return True
+
+        if (
+            len(normalized_transcript) >= 10
+            and normalized_transcript in normalized_answer
+            and len(normalized_answer) <= len(normalized_transcript) + 15
+        ):
+            return True
+
+        return False
+
+    # ------------------------------------------------------------------
+    # Antwort-Bereinigung  (unverändert)
+    # ------------------------------------------------------------------
+
+    def _clean_answer(self, output: str) -> str:
+        """Entfernt llama-server-Ausgaben und begrenzt Elfis Antwort."""
+
+        text = output.strip()
+
+        text = re.sub(
+            r"<think>.*?</think>",
+            "",
+            text,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+
+        text = re.sub(
+            r"<\|.*?\|>",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
+
+        lines = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip()
+        ]
+
+        answer_lines: list[str] = []
+
+        for line in lines:
+            if line.startswith("["):
+                continue
+
+            if line.startswith(">"):
+                continue
+
+            if line.lower().startswith("exiting"):
+                continue
+
+            if "prompt:" in line.lower():
+                continue
+
+            line = re.sub(
+                r"^(elfi|aufzug|assistant)\s*:\s*",
+                "",
+                line,
+                flags=re.IGNORECASE,
+            )
+
+            if line:
+                answer_lines.append(line)
+
+        if not answer_lines:
+            return ""
+
+        answer = answer_lines[-1]
+
+        sentences = re.split(
+            r"(?<=[.!?])\s+",
+            answer,
+        )
+
+        sentences = [
+            sentence.strip()
+            for sentence in sentences
+            if sentence.strip()
+        ]
+
+        answer = " ".join(sentences[:2])
+
+        answer = re.sub(
+            r"[^\wäöüÄÖÜß €,:.!?\-]",
+            "",
+            answer,
+        )
+
+        answer = re.sub(
+            r"\s+",
+            " ",
+            answer,
+        ).strip()
+
+        answer = answer.strip(' "\'„“‚‘')
+
+        words = answer.split()
+
+        if len(words) > 30:
+            answer = " ".join(words[:30]).rstrip(",;:-")
+
+        if answer and answer[-1] not in ".!?":
+            answer += "."
+
+        return answer

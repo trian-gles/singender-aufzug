@@ -1,0 +1,43 @@
+from dataclasses import dataclass
+import re
+
+import pyphen
+
+
+@dataclass(frozen=True)
+class Word:
+    text: str
+    syllables: list[str]
+
+
+class TextAnalyzer:
+    def __init__(self, language: str = "de_DE") -> None:
+        self.hyphenator = pyphen.Pyphen(lang=language)
+
+    def split_into_words(self, text: str) -> list[str]:
+        return re.findall(r"[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*", text)
+
+    def split_into_syllables(self, word: str) -> list[str]:
+        # Zuerst an vorhandenen Bindestrichen und Apostrophen
+        # in Teilwörter zerlegen, dann jedes Teilwort einzeln
+        # mit pyphen silbifizieren.
+        subwords = re.split(r"[-']", word)
+        syllables: list[str] = []
+        for subword in subwords:
+            separated = self.hyphenator.inserted(subword)
+            if not separated:
+                syllables.append(subword)
+            else:
+                syllables.extend(separated.split("-"))
+        return syllables
+
+    def analyze(self, text: str) -> list[Word]:
+        words = self.split_into_words(text)
+
+        return [
+            Word(
+                text=word,
+                syllables=self.split_into_syllables(word),
+            )
+            for word in words
+        ]

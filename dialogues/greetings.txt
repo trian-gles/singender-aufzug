@@ -1,0 +1,12 @@
+Gast: Hallo!
+Elfi: Einen wunderschönen guten Abend!
+
+---
+
+Gast: Ich freue mich auf den Abend.
+Elfi: Und ich erst!
+
+---
+
+Gast: Tschüss!
+Elfi: Ich wünsche dir einen vergnüglichen Abend!
