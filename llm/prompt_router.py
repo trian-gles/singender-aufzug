@@ -47,6 +47,7 @@ class PromptRouter:
         self.dialogues_dir = dialogues_dir
         self.last_program_entry: dict | None = None
         self.last_program_entry_at: float | None = None
+        self.response_variants: dict[str, int] = {}
 
     def build_prompt(self, transcript: str) -> str:
         transcript = self._normalize_input(transcript)
@@ -192,33 +193,16 @@ Elfi:"""
             text,
             ("wann", "uhr", "beginnt", "startet", "zeit", "wie lange", "bis wann", "endet"),
         ):
-            if start and end:
-                return f"{name} spielt von {start} bis {end} Uhr."
-            if start:
-                return f"{name} beginnt um {start} Uhr."
+            return self._time_answer(name, start, end)
 
-        if self._contains_any(
-            text,
-            ("wer spielt", "wer macht mit", "mit wem", "besetzung", "wer ist dabei"),
-        ) and participants:
-            other_participants = [
-                str(person)
-                for person in participants
-                if str(person).casefold() != name.casefold()
-            ]
-            if len(other_participants) == 1:
-                return f"Bei {name} ist {other_participants[0]} dabei."
-            if other_participants:
-                return f"Bei {name} sind {', '.join(other_participants)} dabei."
-
-        if "wer sind" in text and participants:
+        if participants and self._asks_for_participants(text):
             other_participants = [
                 str(person)
                 for person in participants
                 if str(person).casefold() != name.casefold()
             ]
             if other_participants:
-                return f"{name} sind {', '.join(other_participants)}."
+                return self._participant_answer(name, other_participants)
 
         if self._contains_any(
             text,
@@ -262,6 +246,66 @@ Elfi:"""
     def _clear_program_memory(self) -> None:
         self.last_program_entry = None
         self.last_program_entry_at = None
+
+    def _time_answer(
+        self,
+        name: str,
+        start: object,
+        end: object,
+    ) -> str | None:
+        if not start:
+            return None
+
+        if end:
+            return self._choose_variant(
+                f"time:{name}",
+                [
+                    f"Der Auftritt von {name} geht von {start} bis {end} Uhr.",
+                    f"Von {start} bis {end} Uhr ist {name} zu hören.",
+                    f"Um {start} Uhr beginnt der Auftritt von {name}.",
+                ],
+            )
+
+        return self._choose_variant(
+            f"time:{name}",
+            [
+                f"{name} beginnt um {start} Uhr.",
+                f"Um {start} Uhr ist {name} zu hören.",
+            ],
+        )
+
+    def _participant_answer(
+        self,
+        name: str,
+        participants: list[str],
+    ) -> str:
+        people = ", ".join(participants)
+        return self._choose_variant(
+            f"participants:{name}",
+            [
+                f"Zum Auftritt von {name} gehören {people}.",
+                f"{people} stehen hinter dem Act {name}.",
+                f"Bei {name} sind {people} mit dabei.",
+            ],
+        )
+
+    def _choose_variant(self, key: str, options: list[str]) -> str:
+        index = self.response_variants.get(key, 0)
+        self.response_variants[key] = index + 1
+        return options[index % len(options)]
+
+    @staticmethod
+    def _asks_for_participants(text: str) -> bool:
+        if PromptRouter._contains_any(
+            text,
+            (
+                "wer spielt", "wer macht mit", "mit wem", "besetzung",
+                "wer ist dabei", "wer sind", "wie heißt die künstler",
+                "wie heisst die künstler",
+            ),
+        ):
+            return True
+        return "künstler" in text and "heißt" in text
 
     def _next_program_response(self, program: list, text: str) -> str | None:
         """Findet den folgenden Act, wenn ein Act ausdrücklich genannt ist."""
@@ -815,7 +859,9 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
     @staticmethod
     def _normalize_input(text: str) -> str:
-        return " ".join(text.split()).strip()
+        normalized = " ".join(text.split()).strip()
+        # Whisper schreibt das Fragewort gelegentlich als "wehm".
+        return re.sub(r"\bwehm\b", "wem", normalized, flags=re.IGNORECASE)
 
     @staticmethod
     def _section(title: str, content: str) -> str:
