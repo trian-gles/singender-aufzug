@@ -5,6 +5,8 @@ import pyphen
 
 
 PRONUNCIATION_SYLLABLES = {
+    "sonomathematische": ["So", "no", "ma", "the", "ma", "ti", "sche"],
+    "impulsarchitekten": ["Im", "pul", "sa", "chi", "tek", "ten"],
     "production": ["Pro", "duc", "tion"],
     "music": ["Mu", "sic"],
     "music-night": ["Mu", "sic", "Night"],
