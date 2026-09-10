@@ -269,6 +269,7 @@ def render_text(
 ) -> str:
     """Rendert Text zu Gesang (TechScore → MBROLA). Gibt den WAV-Pfad zurück."""
 
+    text = normalize_for_speech(text)
     analyzer = TextAnalyzer()
     phonemizer = SyllablePhonemizer()
     aligner = SyllableAligner()
