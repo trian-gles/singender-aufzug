@@ -100,6 +100,11 @@ Elfi:"""
         """Liefert sichere Antworten für eindeutige, lokale Faktenfragen."""
 
         text = self._normalize_input(transcript).lower()
+
+        smalltalk_answer = self._smalltalk_direct_response(text)
+        if smalltalk_answer:
+            return smalltalk_answer
+
         program_answer = self._program_direct_response(text)
         if program_answer:
             return program_answer
@@ -160,6 +165,57 @@ Elfi:"""
             return "Nein. Am besten kenne ich mich mit dem heutigen Abend aus."
         if self._contains_any(text, ("noch einmal mitfahren", "nochmal mitfahren")):
             return "Komm gerne so oft du möchtest!"
+
+        return None
+
+    def _smalltalk_direct_response(self, text: str) -> str | None:
+        """Kurze, sichere Smalltalk-Antworten ohne fehleranfälligen Modellaufruf."""
+
+        if self._contains_any(text, ("witz", "scherz", "etwas lustig")):
+            return self._choose_variant(
+                "smalltalk:joke",
+                [
+                    "Mein Lieblingswitz fährt gerade in den zehnten Stock.",
+                    "Ich erzähle lieber keinen Witz, sonst bleibt er im Erdgeschoss stecken.",
+                    "Mein Humor fährt am liebsten mit Musik nach oben.",
+                ],
+            )
+
+        if (
+            self._contains_any(text, ("lieber", "am liebsten"))
+            or "liber" in text
+        ) and (
+            ("hoch" in text or "nach oben" in text)
+            and ("runter" in text or "nach unten" in text)
+        ):
+            return self._choose_variant(
+                "smalltalk:direction",
+                [
+                    "Beides. Hoch klingt nach Vorfreude, runter nach einer Zugabe.",
+                    "Ich mag jede Richtung, solange Musik mitfährt.",
+                    "Nach oben klingt es heute besonders schön.",
+                ],
+            )
+
+        if self._contains_any(text, ("wie geht", "alles gut", "wie geht es dir")):
+            return self._choose_variant(
+                "smalltalk:mood",
+                [
+                    "Mir geht es bestens. Die nächste Melodie wartet schon.",
+                    "Sehr gut, danke. Ich bin bereit für die nächste Fahrt.",
+                    "Mir geht es wunderbar. Musik macht mich wach.",
+                ],
+            )
+
+        if self._contains_any(text, ("schön", "toll", "super", "großartig", "grossartig")):
+            return self._choose_variant(
+                "smalltalk:compliment",
+                [
+                    "Das freut mich. Mit Gesellschaft klingt Musik noch besser.",
+                    "Danke, das hört man gern zwischen zwei Etagen.",
+                    "Wie schön. Dann singe ich gleich noch lieber.",
+                ],
+            )
 
         return None
 
@@ -861,7 +917,12 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
     def _normalize_input(text: str) -> str:
         normalized = " ".join(text.split()).strip()
         # Whisper schreibt das Fragewort gelegentlich als "wehm".
-        return re.sub(r"\bwehm\b", "wem", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(
+            r"\bwehm\b", "wem", normalized, flags=re.IGNORECASE
+        )
+        return re.sub(
+            r"\bliber\b", "lieber", normalized, flags=re.IGNORECASE
+        )
 
     @staticmethod
     def _section(title: str, content: str) -> str:
