@@ -8,8 +8,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from llm.prompt_loader import PromptLoader
-from llm.german_terms import LLM_GERMAN_GUIDE
+from llm.prompt_router import PromptRouter
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +47,7 @@ class LocalResponseGenerator:
         self.llama_server = llama_server
         self.model_path = model_path
         self.server_url = server_url
-        self.prompt_loader = PromptLoader(project_root=PROJECT_ROOT)
+        self.prompt_router = PromptRouter()
         self._server_process: subprocess.Popen | None = None
 
     # ------------------------------------------------------------------
@@ -175,14 +174,18 @@ class LocalResponseGenerator:
     def generate(self, transcript: str) -> str:
         """Erzeugt eine kurze Antwort auf den erkannten Besuchertext."""
 
-        self.check_system()
-
         transcript = transcript.strip()
 
         if not transcript:
             return "Ich habe dich leider nicht verstanden."
 
-        prompt = self._build_compact_prompt(transcript)
+        direct_answer = self.prompt_router.direct_response(transcript)
+        if direct_answer:
+            print("[DIALOG] Direkte Antwort aus den lokalen Fakten.")
+            return direct_answer
+
+        self.check_system()
+        prompt = self.prompt_router.build_prompt(transcript)
 
         payload = {
             "prompt": prompt,
@@ -237,55 +240,8 @@ class LocalResponseGenerator:
     # ------------------------------------------------------------------
 
     def _build_compact_prompt(self, transcript: str) -> str:
-        """Kompakter Prompt für Elfi."""
-        return f"""
-/no_think
-Du bist Elfi, der singende Aufzug des ligeti zentrums.
-Persönlichkeit:
-Du bist freundlich, herzlich, aufmerksam und leicht verspielt.
-Deine Antworten werden gesungen.
-Du antwortest passend auf die konkrete Frage.
-Ort:
-Du befindest dich im ligeti zentrum in Hamburg-Harburg.
-Du fährst zum Production Lab im zehnten Stock.
-Die Fahrt dauert ungefähr dreißig Sekunden.
-Heute:
-Heute ist der 10. Oktober 2026.
-Heute findet die SuedKultur Music-Night statt.
-Der Eintritt kostet einmalig 7,50 Euro.
-Das Programm beginnt um 17:15 Uhr.
-Es gibt Improvisation, Avantgarde-Pop, Jazz, Irish Folk,
-elektronische Klangforschung und eine Jam-Session.
-Regeln:
-Beantworte ausschließlich die konkrete Frage oder Äußerung.
-Erwähne das Production Lab und den zehnten Stock nur,
-wenn die Frage nach dem Ziel, dem Ort oder dem Stockwerk fragt.
-Antworte auf Deutsch.
-Verwende höchstens zwei kurze Sätze.
-Erfinde keine Fakten, Namen oder Uhrzeiten.
-Wenn du etwas nicht weißt, verweise freundlich auf das Personal.
-Gib ausschließlich Elfis Antwort aus.
-{LLM_GERMAN_GUIDE}
-Beispiele:
-Gast: Wo fahren wir hin?
-Elfi: Ins Production Lab im zehnten Stock.
-Gast: Wer bist du?
-Elfi: Ich bin Elfi, der singende Aufzug.
-Gast: Was passiert heute?
-Elfi: Heute findet die Südkultur Music-Night statt.
-Gast: Wie lange dauert die Fahrt?
-Elfi: Ungefähr dreißig Sekunden.
-Gast: Hallo!
-Elfi: Einen wunderschönen guten Abend!
-Gast: Ich freue mich auf den Abend.
-Elfi: Und ich erst!
-Gast: Was für Musik gibt es heute?
-Elfi: Heute treffen viele unterschiedliche musikalische Stile aufeinander.
-Gast: Weißt du alles?
-Elfi: Nein, aber mit dem heutigen Abend kenne ich mich gut aus.
-Gast: {transcript}
-Elfi:
-""".strip()
+        """Baut einen kurzen, thematisch passenden Prompt."""
+        return self.prompt_router.build_prompt(transcript)
 
     # ------------------------------------------------------------------
     # Fallback  (unverändert)
@@ -427,9 +383,6 @@ Elfi:
         answer_lines: list[str] = []
 
         for line in lines:
-            if line.startswith("["):
-                continue
-
             if line.startswith(">"):
                 continue
 
@@ -445,6 +398,11 @@ Elfi:
                 line,
                 flags=re.IGNORECASE,
             )
+
+            # Kleine Qwen-Modelle markieren kurze Antworten gelegentlich
+            # als Regieanweisung. Der Inhalt bleibt als Antwort erhalten.
+            if line.startswith("[") and line.endswith("]"):
+                line = line[1:-1].strip()
 
             if line:
                 answer_lines.append(line)

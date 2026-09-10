@@ -91,6 +91,93 @@ Elfi:"""
             if section.strip()
         )
 
+    def direct_response(self, transcript: str) -> str | None:
+        """Liefert sichere Antworten für eindeutige, lokale Faktenfragen."""
+
+        text = self._normalize_input(transcript).lower()
+        category = self._classify(text)
+
+        if category == "orientation":
+            if self._contains_any(text, ("wie lange", "fahrt dauert")):
+                return "Die Fahrt dauert ungefähr dreißig Sekunden."
+            if self._contains_any(
+                text,
+                ("wie fühlt", "wie fuehlt", "wie ist die fahrt"),
+            ):
+                return "Wie eine kleine Reise mit Musik und Vorfreude."
+            if self._contains_any(text, ("nach unten", "zurück", "zurueck", "eg")):
+                return "Zum Erdgeschoss geht es mit der Taste EG."
+            if self._contains_any(
+                text,
+                (
+                    "wo fahren",
+                    "wohin",
+                    "welcher stock",
+                    "welchen stock",
+                    "in welchem stock",
+                    "production lab",
+                    "wo aussteigen",
+                ),
+            ):
+                return "Wir fahren ins Production Lab im zehnten Stock."
+
+        if category == "event":
+            return self._event_direct_response(text)
+
+        if category == "artist":
+            if self._contains_any(
+                text,
+                ("wann", "uhr", "beginnt", "startet", "zeit", "wer spielt",
+                 "wer macht mit", "besetzung", "welche musik", "genre", "musikrichtung"),
+            ):
+                return self._artist_context(text).replace("\n", " ")
+
+        if category == "identity":
+            if "warum singst" in text:
+                return "Weil eine Aufzugfahrt mit Musik gleich viel schöner ist."
+            return "Ich bin Elfi, der singende Aufzug."
+
+        if category == "smalltalk":
+            if self._contains_any(text, ("tschüss", "tschuess", "auf wiedersehen", "bis später", "bis spaeter")):
+                return "Ich wünsche dir einen vergnüglichen Abend!"
+            if "danke" in text:
+                return "Sehr gern."
+            if self._contains_any(text, ("hallo", "hi", "moin", "guten tag", "guten abend")):
+                return "Einen wunderschönen guten Abend!"
+
+        if "tanzen" in text:
+            return "Ich kann nur hoch und runter fahren."
+        if self._contains_any(text, ("weißt du alles", "weisst du alles")):
+            return "Nein. Am besten kenne ich mich mit dem heutigen Abend aus."
+        if self._contains_any(text, ("noch einmal mitfahren", "nochmal mitfahren")):
+            return "Komm gerne so oft du möchtest!"
+
+        return None
+
+    def _event_direct_response(self, text: str) -> str | None:
+        event_data = self._read_assignment(
+            self.config_dir / "event.txt",
+            variable_name="event",
+        )
+        if not isinstance(event_data, dict):
+            return None
+
+        name = event_data.get("name", "SuedKultur Music-Night")
+        start = event_data.get("start")
+        price = event_data.get("price")
+        genres = event_data.get("genres", [])
+
+        if self._contains_any(text, ("eintritt", "ticket", "preis", "kostet", "kosten")) and price:
+            return f"Der Eintritt kostet {price}."
+        if self._contains_any(text, ("wann beginnt", "wann geht", "beginn", "startet", "start")) and start:
+            return f"Das Programm beginnt um {start}."
+        if self._contains_any(text, ("musik", "genre", "musikrichtung")) and genres:
+            return f"Heute gibt es {', '.join(genres[:3])} und mehr."
+        if self._contains_any(text, ("was passiert heute", "was ist heute", "veranstaltung", "music night", "music-night", "südkultur", "suedkultur", "programm", "konzert", "jam session")):
+            return f"Heute findet die {name} statt."
+
+        return None
+
     def _base_persona(self) -> str:
         """
         Sehr kompakte Persona.
@@ -112,6 +199,7 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             "Antworte auf Deutsch mit höchstens zwei kurzen Sätzen.\n"
             "Nutze nur die relevanten Informationen.\n"
             "Erfinde keine weiteren Fakten.\n"
+            "Verwende keine Regieanweisungen oder eckigen Klammern.\n"
             "Gib ausschließlich Elfis Antwort aus."
         )
 
@@ -159,6 +247,8 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 "wann geht",
                 "wann beginnt",
                 "musik heute",
+                "was für musik",
+                "welche musik gibt es",
                 "konzert",
                 "jam session",
             ),
@@ -339,15 +429,19 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
             name = str(entry.get("name", "")).lower()
 
+            if artist_lower in name:
+                return entry
+
+        for entry in program:
+            if not isinstance(entry, dict):
+                continue
+
             participants = [
                 str(person).lower()
                 for person in entry.get("participants", [])
             ]
 
-            if (
-                artist_lower in name
-                or artist_lower in participants
-            ):
+            if artist_lower in participants:
                 return entry
 
         return None
