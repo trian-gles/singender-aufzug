@@ -11,9 +11,11 @@ PRONUNCIATION_SYLLABLES = {
     "irish": ["I", "rish"],
     "session": ["Ses", "sion"],
     "jam-session": ["Jam", "Ses", "sion"],
+    "noise": ["Noise"],
     "improvisation": ["Im", "pro", "vi", "sa", "tion"],
     "conceptual": ["Con", "cep", "tu", "al"],
     "interface": ["In", "ter", "face"],
+    "friends": ["Friends"],
 }
 
 
