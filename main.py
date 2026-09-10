@@ -29,6 +29,7 @@ from language.aligner import SyllableAligner
 from language.analyzer import TextAnalyzer
 from language.phoneme_normalizer import GermanMbrolaNormalizer
 from language.phonemizer import SyllablePhonemizer
+from language.number_normalizer import normalize_for_speech
 from music.tech_composer import TechScoreComposer, WordMaterial
 from music.tech_duration import TechDurationPlanner
 from music.tech_score import TechScore
@@ -136,7 +137,7 @@ def prepare_llm_answer(text: str) -> str:
 def prepare_for_singing(text: str, max_words: int = 12) -> str:
     """Bereitet den Text vorsichtig für den Sänger vor."""
 
-    text = text.strip()
+    text = normalize_for_speech(text.strip())
 
     # Sondermarkierungen entfernen
     text = re.sub(r"\[[^\]]+\]", " ", text)
