@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import ast
 import re
+from time import monotonic
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 DIALOGUES_DIR = PROJECT_ROOT / "dialogues"
+PROGRAM_MEMORY_SECONDS = 45
 
 
 class PromptRouter:
@@ -44,6 +46,7 @@ class PromptRouter:
         self.config_dir = config_dir
         self.dialogues_dir = dialogues_dir
         self.last_program_entry: dict | None = None
+        self.last_program_entry_at: float | None = None
 
     def build_prompt(self, transcript: str) -> str:
         transcript = self._normalize_input(transcript)
@@ -177,7 +180,7 @@ Elfi:"""
         if entry is None:
             return None
 
-        self.last_program_entry = entry
+        self._remember_program_entry(entry)
         name = str(entry.get("name", "Der Programmpunkt"))
         start = entry.get("start")
         end = entry.get("end")
@@ -232,9 +235,24 @@ Elfi:"""
                 return entry
 
         if self.last_program_entry and self._looks_like_program_followup(text):
-            return self.last_program_entry
+            if self._program_memory_is_current():
+                return self.last_program_entry
+            self._clear_program_memory()
 
         return None
+
+    def _remember_program_entry(self, entry: dict) -> None:
+        self.last_program_entry = entry
+        self.last_program_entry_at = monotonic()
+
+    def _program_memory_is_current(self) -> bool:
+        if self.last_program_entry_at is None:
+            return False
+        return monotonic() - self.last_program_entry_at <= PROGRAM_MEMORY_SECONDS
+
+    def _clear_program_memory(self) -> None:
+        self.last_program_entry = None
+        self.last_program_entry_at = None
 
     def _next_program_response(self, program: list, text: str) -> str | None:
         """Findet den folgenden Act, wenn ein Act ausdrücklich genannt ist."""
