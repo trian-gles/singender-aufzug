@@ -1,27 +1,49 @@
+from dataclasses import replace
 import subprocess
-import re
 
 from audio.pho import Phoneme, PhoParser
 from language.analyzer import Word
 
 
-PRONUNCIATION_OVERRIDES = {
-    "production": "Pradakschen",
-    "lab": "Läpp",
+ENGLISH_TERMS = frozenset(
+    {
+        "production",
+        "lab",
+        "music",
+        "night",
+        "music-night",
+        "irish",
+        "folk",
+        "jam",
+        "session",
+        "jam-session",
+        "free",
+        "noise",
+        "improvisation",
+        "conceptual",
+        "interface",
+        "clarks",
+        "planet",
+        "friends",
+        "drums",
+    }
+)
+
+# mb-en1 erzeugt echte englische Phoneme. de4 besitzt nicht alle davon;
+# diese Tabelle bildet nur die fehlenden Laute auf die nächstliegenden
+# MBROLA-de4-Phoneme ab. Die vorhandenen Konsonanten bleiben erhalten.
+ENGLISH_TO_DE4 = {
+    "r": ("R",),
+    "V": ("a",),
+    "{": ("E",),
+    "e": ("E",),
+    "@U": ("aU",),
+    "OI": ("OY",),
+    "eI": ("e:",),
+    "A:": ("a:",),
+    "dZ": ("d", "S"),
+    "5": ("@", "l"),
 }
-
-
-def apply_pronunciation_overrides(text: str) -> str:
-    """Ersetzt ausgewählte englische Begriffe durch singbare Annäherungen."""
-
-    for source, replacement in PRONUNCIATION_OVERRIDES.items():
-        text = re.sub(
-            rf"\b{re.escape(source)}\b",
-            replacement,
-            text,
-            flags=re.IGNORECASE,
-        )
-    return text
 
 
 class SyllablePhonemizer:
@@ -60,12 +82,12 @@ class SyllablePhonemizer:
         return phonemes
 
     def phonemize_text(self, text: str) -> list[Phoneme]:
-        text = apply_pronunciation_overrides(text)
+        english_term = text.lower() in ENGLISH_TERMS
         result = subprocess.run(
             [
                 "espeak-ng",
                 "-v",
-                self.voice,
+                "mb-en1" if english_term else self.voice,
                 "--pho",
                 text,
             ],
@@ -82,7 +104,31 @@ class SyllablePhonemizer:
             if phoneme is not None:
                 phonemes.append(phoneme)
 
-        return phonemes    
+        if english_term:
+            return self._map_english_to_de4(phonemes)
+
+        return phonemes
+
+    @staticmethod
+    def _map_english_to_de4(phonemes: list[Phoneme]) -> list[Phoneme]:
+        """Überträgt en1-Phoneme auf das Inventar der de4-Stimme."""
+
+        mapped: list[Phoneme] = []
+        for phoneme in phonemes:
+            symbols = ENGLISH_TO_DE4.get(phoneme.symbol, (phoneme.symbol,))
+            duration, remainder = divmod(phoneme.duration_ms, len(symbols))
+
+            for index, symbol in enumerate(symbols):
+                mapped.append(
+                    replace(
+                        phoneme,
+                        symbol=symbol,
+                        duration_ms=duration + (1 if index < remainder else 0),
+                        pitch_targets=phoneme.pitch_targets if index == 0 else [],
+                    )
+                )
+
+        return mapped
 
     def phonemize_word(
         self,

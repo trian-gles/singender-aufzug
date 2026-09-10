@@ -6,6 +6,14 @@ import pyphen
 
 PRONUNCIATION_SYLLABLES = {
     "production": ["Pro", "duc", "tion"],
+    "music": ["Mu", "sic"],
+    "music-night": ["Mu", "sic", "Night"],
+    "irish": ["I", "rish"],
+    "session": ["Ses", "sion"],
+    "jam-session": ["Jam", "Ses", "sion"],
+    "improvisation": ["Im", "pro", "vi", "sa", "tion"],
+    "conceptual": ["Con", "cep", "tu", "al"],
+    "interface": ["In", "ter", "face"],
 }
 
 
