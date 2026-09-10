@@ -4,6 +4,11 @@ import re
 import pyphen
 
 
+PRONUNCIATION_SYLLABLES = {
+    "production": ["Pro", "duc", "tion"],
+}
+
+
 @dataclass(frozen=True)
 class Word:
     text: str
@@ -18,6 +23,10 @@ class TextAnalyzer:
         return re.findall(r"[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*", text)
 
     def split_into_syllables(self, word: str) -> list[str]:
+        pronunciation_syllables = PRONUNCIATION_SYLLABLES.get(word.lower())
+        if pronunciation_syllables:
+            return pronunciation_syllables
+
         # Zuerst an vorhandenen Bindestrichen und Apostrophen
         # in Teilwörter zerlegen, dann jedes Teilwort einzeln
         # mit pyphen silbifizieren.
