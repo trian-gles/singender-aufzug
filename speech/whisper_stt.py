@@ -29,7 +29,7 @@ def clean_transcript(text: str) -> str:
 def transcribe(
     audio_file: Path,
     language: str = "de",
-    threads: int = 2,
+    threads: int = 4,
     whisper_cli: Path = DEFAULT_WHISPER_CLI,
     model: Path = DEFAULT_MODEL,
 ) -> str:
