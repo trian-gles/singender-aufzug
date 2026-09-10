@@ -146,6 +146,35 @@ def prepare_for_singing(text: str, max_words: int = 12) -> str:
 
     words = text.split()
     if len(words) > max_words:
+        sentences = re.findall(r"[^.!?]+[.!?]+|[^.!?]+$", text)
+        selected: list[str] = []
+        selected_words = 0
+
+        for sentence in sentences:
+            sentence = sentence.strip()
+            sentence_words = sentence.split()
+
+            if not sentence_words:
+                continue
+
+            if selected_words + len(sentence_words) <= max_words:
+                selected.append(sentence)
+                selected_words += len(sentence_words)
+                continue
+
+            # Ist schon ein ganzer Satz gewählt, endet der Text hier.
+            if selected:
+                break
+
+            # Ein sehr langer Einzelsatz wird weiterhin begrenzt.
+            text = " ".join(sentence_words[:max_words])
+            if text[-1] not in ".!?":
+                text += "."
+            return text
+
+        if selected:
+            return " ".join(selected)
+
         text = " ".join(words[:max_words])
         if text[-1] not in ".!?":
             text += "."
