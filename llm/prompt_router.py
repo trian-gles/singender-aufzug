@@ -211,6 +211,15 @@ Elfi:"""
             if other_participants:
                 return f"Bei {name} sind {', '.join(other_participants)} dabei."
 
+        if "wer sind" in text and participants:
+            other_participants = [
+                str(person)
+                for person in participants
+                if str(person).casefold() != name.casefold()
+            ]
+            if other_participants:
+                return f"{name} sind {', '.join(other_participants)}."
+
         if self._contains_any(
             text,
             ("welche musik", "was für musik", "genre", "musikrichtung", "was spielt"),
@@ -308,14 +317,20 @@ Elfi:"""
 
     @staticmethod
     def _looks_like_program_followup(text: str) -> bool:
+        pronoun = re.search(
+            r"\b(sie|er|ihnen|ihm|dieser|diese|dieses)\b",
+            text,
+        )
+        if not pronoun:
+            return False
+
         return PromptRouter._contains_any(
             text,
             (
-                "sie", "er", "die", "der", "diese", "dieser",
                 "wann", "uhr", "wie lange", "bis wann", "endet",
-                "wer spielt", "wer macht mit", "mit wem", "besetzung",
-                "welche musik", "was für musik", "genre", "musikrichtung",
-                "was macht", "erzähl", "erzaehl", "mehr über",
+                "wer", "mit wem", "besetzung", "welche musik",
+                "was für musik", "genre", "musikrichtung", "was macht",
+                "erzähl", "erzaehl", "mehr über",
             ),
         )
 
@@ -331,6 +346,33 @@ Elfi:"""
         start = event_data.get("start")
         price = event_data.get("price")
         genres = event_data.get("genres", [])
+
+        if self._contains_any(
+            text,
+            (
+                "wer sind die künstler", "wer sind die künstlerin",
+                "welche künstler", "welche künstlerin", "wer spielt heute",
+                "wer tritt auf",
+            ),
+        ):
+            program = self._read_assignment(
+                self.config_dir / "program.txt",
+                variable_name="program",
+            )
+            if isinstance(program, list):
+                short_names = [
+                    str(entry.get("name"))
+                    for entry in program
+                    if isinstance(entry, dict)
+                    and entry.get("type") != "installation"
+                    and entry.get("name")
+                    and len(str(entry["name"]).split()) <= 2
+                ]
+                if len(short_names) >= 3:
+                    return (
+                        "Heute spielen unter anderem "
+                        f"{short_names[0]}, {short_names[1]} und {short_names[2]}."
+                    )
 
         if self._contains_any(text, ("eintritt", "ticket", "preis", "kostet", "kosten")) and price:
             return f"Der Eintritt kostet {price}."
@@ -414,6 +456,12 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 "musik heute",
                 "was für musik",
                 "welche musik gibt es",
+                "wer sind die künstler",
+                "wer sind die künstlerin",
+                "welche künstler",
+                "welche künstlerin",
+                "wer spielt heute",
+                "wer tritt auf",
                 "konzert",
                 "jam session",
             ),
@@ -537,6 +585,31 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
         ):
             if location:
                 return f"Die Veranstaltung findet im {location} statt."
+
+        if self._contains_any(
+            text,
+            (
+                "wer sind die künstler", "wer sind die künstlerin",
+                "welche künstler", "welche künstlerin", "wer spielt heute",
+                "wer tritt auf",
+            ),
+        ):
+            program = self._read_assignment(
+                self.config_dir / "program.txt",
+                variable_name="program",
+            )
+            if isinstance(program, list):
+                acts = []
+                for entry in program:
+                    if not isinstance(entry, dict):
+                        continue
+                    name = entry.get("name")
+                    start_time = entry.get("start")
+                    if name and start_time:
+                        acts.append(f"{start_time}: {name}")
+                if acts:
+                    return "HEUTIGES PROGRAMM\n" + "\n".join(acts)
+
         details = [f"Heute findet die {name} statt."]
         if genres:
             genre_text = ", ".join(genres[:-1])
