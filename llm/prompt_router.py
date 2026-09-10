@@ -43,6 +43,7 @@ class PromptRouter:
     ) -> None:
         self.config_dir = config_dir
         self.dialogues_dir = dialogues_dir
+        self.last_program_entry: dict | None = None
 
     def build_prompt(self, transcript: str) -> str:
         transcript = self._normalize_input(transcript)
@@ -95,6 +96,10 @@ Elfi:"""
         """Liefert sichere Antworten für eindeutige, lokale Faktenfragen."""
 
         text = self._normalize_input(transcript).lower()
+        program_answer = self._program_direct_response(text)
+        if program_answer:
+            return program_answer
+
         category = self._classify(text)
 
         if category == "orientation":
@@ -153,6 +158,148 @@ Elfi:"""
             return "Komm gerne so oft du möchtest!"
 
         return None
+
+    def _program_direct_response(self, text: str) -> str | None:
+        """Beantwortet Programmfragen aus den lokalen, strukturierten Daten."""
+
+        program = self._read_assignment(
+            self.config_dir / "program.txt",
+            variable_name="program",
+        )
+        if not isinstance(program, list):
+            return None
+
+        next_response = self._next_program_response(program, text)
+        if next_response:
+            return next_response
+
+        entry = self._entry_for_question(program, text)
+        if entry is None:
+            return None
+
+        self.last_program_entry = entry
+        name = str(entry.get("name", "Der Programmpunkt"))
+        start = entry.get("start")
+        end = entry.get("end")
+        genre = entry.get("genre")
+        participants = entry.get("participants", [])
+        description = entry.get("description")
+
+        if self._contains_any(
+            text,
+            ("wann", "uhr", "beginnt", "startet", "zeit", "wie lange", "bis wann", "endet"),
+        ):
+            if start and end:
+                return f"{name} spielt von {start} bis {end} Uhr."
+            if start:
+                return f"{name} beginnt um {start} Uhr."
+
+        if self._contains_any(
+            text,
+            ("wer spielt", "wer macht mit", "mit wem", "besetzung", "wer ist dabei"),
+        ) and participants:
+            other_participants = [
+                str(person)
+                for person in participants
+                if str(person).casefold() != name.casefold()
+            ]
+            if len(other_participants) == 1:
+                return f"Bei {name} ist {other_participants[0]} dabei."
+            if other_participants:
+                return f"Bei {name} sind {', '.join(other_participants)} dabei."
+
+        if self._contains_any(
+            text,
+            ("welche musik", "was für musik", "genre", "musikrichtung", "was spielt"),
+        ) and genre:
+            return f"{name} spielt {genre}."
+
+        if self._contains_any(
+            text,
+            ("was macht", "erzähl", "erzaehl", "was ist", "wer ist", "mehr über", "mehr von"),
+        ):
+            return self._short_program_description(name, genre, description, start)
+
+        # Die Nennung eines Acts ohne weitere Frage ist eine Einladung zu
+        # einer kurzen, gesicherten Einführung.
+        return self._short_program_description(name, genre, description, start)
+
+    def _entry_for_question(self, program: list, text: str) -> dict | None:
+        artist = self._find_artist(text)
+        if artist:
+            entry = self._find_program_entry(program, artist)
+            if entry:
+                return entry
+
+        if self.last_program_entry and self._looks_like_program_followup(text):
+            return self.last_program_entry
+
+        return None
+
+    def _next_program_response(self, program: list, text: str) -> str | None:
+        """Findet den folgenden Act, wenn ein Act ausdrücklich genannt ist."""
+
+        if not self._contains_any(text, ("was kommt nach", "wer kommt nach", "wer spielt nach", "nach dem", "nach der")):
+            return None
+
+        artist = self._find_artist(text)
+        if not artist:
+            return None
+
+        current = self._find_program_entry(program, artist)
+        if current is None:
+            return None
+
+        try:
+            index = program.index(current)
+        except ValueError:
+            return None
+
+        if index + 1 >= len(program):
+            return "Danach endet das Programm."
+
+        following = program[index + 1]
+        name = following.get("name", "der nächste Programmpunkt")
+        start = following.get("start")
+        if start:
+            return f"Nach {current.get('name')} spielt {name} um {start} Uhr."
+        return f"Nach {current.get('name')} kommt {name}."
+
+    @staticmethod
+    def _short_program_description(
+        name: str,
+        genre: object,
+        description: object,
+        start: object,
+    ) -> str:
+        """Gibt einen kurzen, gut singbaren und faktischen Überblick zurück."""
+
+        if isinstance(description, str) and description:
+            sentences = re.split(r"(?<=[.!?])\s+", description.strip())
+            first_sentence = sentences[0].strip()
+            if len(first_sentence.split()) <= 12:
+                return first_sentence
+
+        if genre and start:
+            return f"{name} spielt {genre} um {start} Uhr."
+        if genre:
+            return f"{name} spielt {genre}."
+        if start:
+            return f"{name} beginnt um {start} Uhr."
+        return f"{name} ist heute im Programm."
+
+    @staticmethod
+    def _looks_like_program_followup(text: str) -> bool:
+        return PromptRouter._contains_any(
+            text,
+            (
+                "sie", "er", "die", "der", "diese", "dieser",
+                "wann", "uhr", "wie lange", "bis wann", "endet",
+                "wer spielt", "wer macht mit", "mit wem", "besetzung",
+                "welche musik", "was für musik", "genre", "musikrichtung",
+                "was macht", "erzähl", "erzaehl", "mehr über",
+            ),
+        )
 
     def _event_direct_response(self, text: str) -> str | None:
         event_data = self._read_assignment(
