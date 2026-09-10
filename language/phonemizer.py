@@ -1,7 +1,27 @@
 import subprocess
+import re
 
 from audio.pho import Phoneme, PhoParser
 from language.analyzer import Word
+
+
+PRONUNCIATION_OVERRIDES = {
+    "production": "Pradakschen",
+    "lab": "Läpp",
+}
+
+
+def apply_pronunciation_overrides(text: str) -> str:
+    """Ersetzt ausgewählte englische Begriffe durch singbare Annäherungen."""
+
+    for source, replacement in PRONUNCIATION_OVERRIDES.items():
+        text = re.sub(
+            rf"\b{re.escape(source)}\b",
+            replacement,
+            text,
+            flags=re.IGNORECASE,
+        )
+    return text
 
 
 class SyllablePhonemizer:
@@ -40,6 +60,7 @@ class SyllablePhonemizer:
         return phonemes
 
     def phonemize_text(self, text: str) -> list[Phoneme]:
+        text = apply_pronunciation_overrides(text)
         result = subprocess.run(
             [
                 "espeak-ng",
