@@ -17,7 +17,10 @@ import sys
 from pathlib import Path
 from time import time
 
-from llm.local_response_generator import LocalResponseGenerator
+from llm.local_response_generator import (
+    LocalResponseGenerator,
+    SOURCE_LABELS,
+)
 from speech.recorder_vad import record_audio
 from speech.whisper_stt import transcribe
 
@@ -56,6 +59,16 @@ BPM = 96
 TOKEN_PATTERN = re.compile(r"[A-Za-zÄÖÜäöüß]+(?:[-'][A-Za-zÄÖÜäöüß]+)*|[,.!?;:]")
 PUNCTUATION = {",", ":", ";", ".", "!", "?"}
 
+# Modell-Pfade (lokal)
+WHISPER_MODEL_PATH = Path.home() / "whisper.cpp/models/ggml-small.bin"
+LLM_MODEL_PATH = PROJECT_DIR / "models/llm/Qwen3-4B-Q4_K_M.gguf"
+
+
+def model_name(path: Path) -> str:
+    """Leitet den genauen Modellnamen aus dem Dateinamen ab (z. B. ggml-tiny.bin)."""
+    return path.name
+
+
 # ---------------------------------------------------------------------------
 # System-Check
 # ---------------------------------------------------------------------------
@@ -73,19 +86,19 @@ def check_system() -> None:
 
     for name, path in required_commands.items():
         if not path:
-            errors.append(f"Programm fehlt: {name}")
+            errors.append(f"Missing program: {name}")
 
     required_files = [
         PROJECT_DIR / "main.py",
         Path.home() / "whisper.cpp/build/bin/whisper-cli",
-        Path.home() / "whisper.cpp/models/ggml-small.bin",
+        WHISPER_MODEL_PATH,
         Path.home() / "llama.cpp/build/bin/llama-server",
-        PROJECT_DIR / "models/llm/Qwen3-4B-Q4_K_M.gguf",
+        LLM_MODEL_PATH,
     ]
 
     for path in required_files:
         if not path.exists():
-            errors.append(f"Datei fehlt: {path}")
+            errors.append(f"Missing file: {path}")
 
     if errors:
         raise RuntimeError("\n".join(errors))
@@ -227,10 +240,10 @@ def prepare_word(
 
     if len(groups) != len(word.syllables):
         print(
-            f"WARNUNG: {word.text!r}: "
-            f"{len(word.syllables)} Silben, "
-            f"{len(groups)} Phonemgruppen; "
-            "Fallback konnte das Wort nicht vollständig ausrichten."
+            f"WARNING: {word.text!r}: "
+            f"{len(word.syllables)} syllables, "
+            f"{len(groups)} phoneme groups; "
+            "the fallback could not align the word completely."
         )
         return None
 
@@ -269,9 +282,9 @@ def print_score(score: TechScore) -> None:
     )
     print("=" * 104)
     print(
-        f"{'Wort':<16}{'Silbe':<12}"
-        f"{'MIDI / Hz / Beats / Typ':<50}"
-        f"{'Beats':>8}{'Akzent':>18}"
+        f"{'Word':<16}{'Syllable':<12}"
+        f"{'MIDI / Hz / Beats / Type':<50}"
+        f"{'Beats':>8}{'Accent':>18}"
     )
     print("-" * 104)
 
@@ -286,7 +299,7 @@ def print_score(score: TechScore) -> None:
                 f"{notes:<50}{syllable.beats:>8.2f}{syllable.accent.value:>18}"
             )
         print(
-            f"Kadenz: {phrase.cadence.value} | "
+            f"Cadence: {phrase.cadence.value} | "
             f"Pause: {phrase.pause_beats:.2f} Beats"
         )
 
@@ -325,7 +338,7 @@ def render_text(
         realized = duration.realize(score)
 
         if diagnostics:
-            print("\nPHONEM- UND NOTEN-TIMING")
+            print("\nPHONEME AND NOTE TIMING")
             print("-" * 104)
             for phrase in realized.phrases:
                 for syllable in phrase.syllables:
@@ -349,7 +362,7 @@ def render_text(
         performance = performance_planner.plan(realized)
 
         if diagnostics:
-            print("\nGESTEN- UND F0-PLAN")
+            print("\nGESTURE AND F0 PLAN")
             print("-" * 104)
             for phrase in performance.phrases:
                 for syllable in phrase.syllables:
@@ -368,7 +381,7 @@ def render_text(
         output.extend(singer.sing(performance))
 
     if not output:
-        raise RuntimeError("Es konnten keine Phoneme erzeugt werden.")
+        raise RuntimeError("No phonemes could be generated.")
 
     archived = archive_previous_pho()
     pho = PhoWriter().write(output, str(OUTPUT_PHO))
@@ -376,12 +389,12 @@ def render_text(
 
     total = sum(p.duration_ms for p in output)
 
-    print("\n" + "=" * 104 + f"\nERGEBNIS\n{'=' * 104}")
-    print(f"Gesamtdauer: {total / 1000:.2f} Sekunden")
-    print(f"PHO-Datei: {pho} (wird beim nächsten Lauf überschrieben)")
-    print(f"WAV-Datei: {OUTPUT_WAV} (wird immer überschrieben)")
+    print("\n" + "=" * 104 + f"\nRESULT\n{'=' * 104}")
+    print(f"Total duration: {total / 1000:.2f} seconds")
+    print(f"PHO file: {pho} (overwritten on next run)")
+    print(f"WAV file: {OUTPUT_WAV} (always overwritten)")
     if archived:
-        print(f"Vorherige PHO archiviert: {PHO_ARCHIVE} → {archived}")
+        print(f"Previous PHO archived: {PHO_ARCHIVE} → {archived}")
 
     return str(OUTPUT_WAV)
 
@@ -399,8 +412,8 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     t = time()
     print()
     print("-" * 54)
-    print(f"AUFNAHME: Ich höre {RECORDING_SECONDS} Sekunden zu …")
-    print("Bitte jetzt deutlich und nah am Mikrofon sprechen.")
+    print(f"RECORDING: Listening for {RECORDING_SECONDS} seconds ...")
+    print("Please speak clearly and close to the microphone.")
 
     record_audio(
         output_file=RECORDING_FILE,
@@ -408,53 +421,51 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
         device="plughw:0,0",
     )
 
-    print("STT: Sprache wird vollständig lokal erkannt …")
+    print("STT: Transcribing entirely locally ...")
     print(f"{time() - t:.2f} Sec")
     t = time()
     transcript = transcribe(RECORDING_FILE)
     transcript = prepare_transcript(transcript)
 
     if not transcript:
-        print("Es wurde kein verständlicher Text erkannt – überspringe.")
+        print("No intelligible text recognized – skipping.")
         return
 
     print()
-    print("ERKANNT:")
+    print("RECOGNIZED:")
     print(f'  "{transcript}"')
 
     print(f"{time() - t:.2f} Sec")
+    t_sprache_ende = time()
     t = time()
     # --- Elfi-Antwort ---
-    print()
-    print("ELFI DENKT NACH …")
-
-    answer = generator.generate(transcript)
-    answer = prepare_llm_answer(answer)
+    result = generator.generate(transcript)
+    answer = prepare_llm_answer(result.text)
 
     if not answer:
-        print("Das Sprachmodell hat keine verwendbare Antwort erzeugt.")
+        print("The language model did not produce a usable answer.")
         return
 
     print(f"{time() - t:.2f} Sec")
     t = time()
     print()
-    print("ELFI ANTWORTET:")
+    print(f"ELFI ANSWERS ({SOURCE_LABELS[result.source]}):")
     print(f'  "{answer}"')
 
     # --- Gesang ---
     singing_text = prepare_for_singing(answer)
 
     if not singing_text:
-        print("Aus Elfis Antwort konnte kein singbarer Text erzeugt werden.")
+        print("No singable text could be generated from Elfi's answer.")
         return
 
     if singing_text != answer:
         print()
-        print("FÜR DEN GESANG AUFBEREITET:")
+        print("PREPARED FOR SINGING:")
         print(f'  "{singing_text}"')
 
     print()
-    print("GESANG: TechScore und MBROLA arbeiten …")
+    print("SINGING: TechScore and MBROLA working ...")
 
     print(f"{time() - t:.2f} Sec")
     t = time()
@@ -464,8 +475,10 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
         diagnostics=False,
     )
 
+    print(f"TOTAL DURATION (end of speech → start of singing): "
+          f"{time() - t_sprache_ende:.2f} Sec")
     print()
-    print("WIEDERGABE …")
+    print("PLAYBACK ...")
     play_audio(Path(wav_path))
 
     print(f"{time() - t:.2f} Sec")
@@ -478,20 +491,23 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
 def main() -> int:
     print()
     print("=" * 54)
-    print("       SINGENDER AUFZUG – LLM-DEMO 0.4")
+    print("       SINGING ELEVATOR – LLM DEMO 0.4")
     print("=" * 54)
     print()
-    print("Lokale Verarbeitung:")
-    print("Enter → Mikrofon → Whisper → Elfi-LLM (llama-server)")
-    print("       → TechScore → MBROLA → Lautsprecher → nächster Durchlauf")
+    print("Local processing:")
+    print("Enter → Microphone → Whisper → Elfi-LLM (llama-server)")
+    print("       → TechScore → MBROLA → Speaker → next cycle")
     print()
-    print("Beenden: Ctrl+C")
+    print(f"Models: Whisper = {model_name(WHISPER_MODEL_PATH)} | "
+          f"LLM = {model_name(LLM_MODEL_PATH)}")
+    print()
+    print("Quit: Ctrl+C")
 
     # ------------------------------------------------------------------
     # Argumente für schnellen Text-Direktmodus (optional)
     # ------------------------------------------------------------------
     parser = argparse.ArgumentParser(
-        description="Singender Aufzug – TechScore V4"
+        description="Singing Elevator – TechScore V4"
     )
     parser.add_argument("text", nargs="*")
     parser.add_argument("--bpm", type=int, default=BPM)
@@ -500,7 +516,7 @@ def main() -> int:
 
     text_arg = " ".join(args.text).strip()
     if text_arg:
-        # Direktmodus: nur singen, kein LLM, keine Aufnahme
+        # Direct mode: sing only, no LLM, no recording
         render_text(text_arg, args.bpm, args.diagnostics)
         return 0
 
@@ -511,43 +527,43 @@ def main() -> int:
 
     try:
         print()
-        print("SYSTEMCHECK …")
+        print("SYSTEM CHECK ...")
         check_system()
-        print("SYSTEMCHECK: OK")
+        print("SYSTEM CHECK: OK")
 
         print()
-        print("LLM: Elfi wird vorbereitet …")
+        print("LLM: Preparing Elfi ...")
         llm_generator = LocalResponseGenerator()
         llm_generator.start_server()
         llm_generator.check_system()
-        print("LLM: Elfi ist bereit.")
+        print("LLM: Elfi is ready.")
 
-        durchlauf = 0
+        cycle = 0
 
         while True:
-            durchlauf += 1
+            cycle += 1
             print()
             print("=" * 54)
-            print(f"       DURCHLAUF {durchlauf}")
+            print(f"       CYCLE {cycle}")
             print("=" * 54)
 
-            input("\nDrücke ENTER zum Aufnehmen (oder Ctrl+C zum Beenden).")
+            input("\nPress ENTER to record (or Ctrl+C to quit).")
 
             try:
                 one_cycle(llm_generator)
             except Exception as exc:
                 print()
-                print(f"Fehler in Durchlauf {durchlauf}: {exc}")
-                print("Starte nächsten Durchlauf …")
+                print(f"Error in cycle {cycle}: {exc}")
+                print("Starting next cycle ...")
 
     except KeyboardInterrupt:
-        print("\n\nAuf Wiedersehen! Elfi verabschiedet sich.")
+        print("\n\nGoodbye! Elfi is signing off.")
         return 0
 
     except Exception as exc:
         print()
         print("=" * 54)
-        print("DAS PROGRAMM KONNTE NICHT GESTARTET WERDEN")
+        print("THE PROGRAM COULD NOT BE STARTED")
         print("=" * 54)
         print(exc)
         return 1

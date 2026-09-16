@@ -2,7 +2,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from llm.local_response_generator import LocalResponseGenerator
+from llm.local_response_generator import (
+    LocalResponseGenerator,
+    SOURCE_LABELS,
+)
 from speech.recorder_vad import record_audio
 from speech.whisper_stt import transcribe
 from voice_demo import (
@@ -178,8 +181,8 @@ def generate_elfi_answer(
     print()
     print("ELFI DENKT NACH ...")
 
-    answer = generator.generate(transcript)
-    answer = prepare_llm_answer(answer)
+    result = generator.generate(transcript)
+    answer = prepare_llm_answer(result.text)
 
     if not answer:
         raise RuntimeError(
@@ -187,7 +190,7 @@ def generate_elfi_answer(
         )
 
     print()
-    print("ELFI ANTWORTET:")
+    print(f"ELFI ANTWORTET ({SOURCE_LABELS[result.source]}):")
     print(f'"{answer}"')
 
     return answer
