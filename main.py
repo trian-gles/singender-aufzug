@@ -78,9 +78,9 @@ def check_system() -> None:
     required_files = [
         PROJECT_DIR / "main.py",
         Path.home() / "whisper.cpp/build/bin/whisper-cli",
-        Path.home() / "whisper.cpp/models/ggml-tiny.bin",
+        Path.home() / "whisper.cpp/models/ggml-small.bin",
         Path.home() / "llama.cpp/build/bin/llama-server",
-        PROJECT_DIR / "models/llm/Qwen3-1.7B-Q4_K_M.gguf",
+        PROJECT_DIR / "models/llm/Qwen3-4B-Q4_K_M.gguf",
     ]
 
     for path in required_files:
