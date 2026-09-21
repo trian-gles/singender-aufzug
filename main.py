@@ -15,7 +15,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
-from time import time
+from time import time, sleep
 import os
 import signal
 
@@ -43,6 +43,7 @@ from music.performance import PerformancePlanner
 from audio.pho import Phoneme
 from audio.pho_writer import PhoWriter
 from audio.renderer import MbrolaRenderer
+from interface import osc_interface_controller
 from datetime import datetime
 import zipfile
 import subprocess
@@ -423,6 +424,7 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     print(f"RECORDING: Listening for {RECORDING_SECONDS} seconds ...")
     print("Please speak clearly and close to the microphone.")
 
+    osc_interface_controller.listening()
     record_audio(
         output_file=RECORDING_FILE,
         duration_seconds=RECORDING_SECONDS,
@@ -447,6 +449,7 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     t_sprache_ende = time()
     t = time()
     waiting_music_process = play_audio_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elfi-denkt.wav"))
+    osc_interface_controller.thinking()
     # --- Elfi-Antwort ---
     result = generator.generate(transcript)
     answer = prepare_llm_answer(result.text)
@@ -476,6 +479,7 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     print()
     print("SINGING: TechScore and MBROLA working ...")
 
+    osc_interface_controller.speaking(singing_text)
     print(f"{time() - t:.2f} Sec")
     t = time()
     waiting_music_process.kill()
@@ -555,12 +559,13 @@ def main() -> int:
             print("=" * 54)
             print(f"       CYCLE {cycle}")
             print("=" * 54)
-            
             elevator_music_process = play_audio_loop_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elevator-music.wav"))
             input("\nPress ENTER to record (or Ctrl+C to quit).")
             os.killpg(elevator_music_process.pid, signal.SIGTERM)
             try:
                 one_cycle(llm_generator)
+                sleep(3)
+                osc_interface_controller.idle()
             except Exception as exc:
                 print()
                 print(f"Error in cycle {cycle}: {exc}")
