@@ -1,7 +1,8 @@
 __pycache__/
 .venv/
 *.pyc
-*.wav
+aufnahme.wav
+singender_aufzug.wav
 *.gguf
 models/
 *.zip
