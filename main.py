@@ -16,6 +16,8 @@ import shutil
 import sys
 from pathlib import Path
 from time import time
+import os
+import signal
 
 from llm.local_response_generator import (
     LocalResponseGenerator,
@@ -405,6 +407,10 @@ def play_audio(audio_file: Path) -> None:
 
 def play_audio_stoppable(audio_file: Path):
     return subprocess.Popen(["aplay", "-q", str(audio_file)])
+
+
+def play_audio_loop_stoppable(audio_file: Path):
+    return subprocess.Popen(["sh", "-c", f"while true; do aplay {str(audio_file)}; done"], start_new_session=True)
 # ---------------------------------------------------------------------------
 # Einzelner Durchlauf
 # ---------------------------------------------------------------------------
@@ -549,9 +555,10 @@ def main() -> int:
             print("=" * 54)
             print(f"       CYCLE {cycle}")
             print("=" * 54)
-
+            
+            elevator_music_process = play_audio_loop_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elevator-music.wav"))
             input("\nPress ENTER to record (or Ctrl+C to quit).")
-
+            os.killpg(elevator_music_process.pid, signal.SIGTERM)
             try:
                 one_cycle(llm_generator)
             except Exception as exc:
@@ -560,6 +567,7 @@ def main() -> int:
                 print("Starting next cycle ...")
 
     except KeyboardInterrupt:
+        os.killpg(elevator_music_process.pid, signal.SIGTERM)
         print("\n\nGoodbye! Elfi is signing off.")
         return 0
 
