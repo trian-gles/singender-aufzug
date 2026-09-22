@@ -5,7 +5,7 @@ from asciimatics.scene import Scene
 from asciimatics.effects import Effect, Cycle, Stars, Print
 from asciimatics.renderers import FigletText, StaticRenderer
 from asciimatics.exceptions import NextScene
-
+from time import sleep
 from pythonosc import dispatcher
 from pythonosc import osc_server
 
@@ -66,19 +66,20 @@ def osc_handler(address, *args):
     global current_scene
     global speaking_text
 
-    print("OSC:", address, args, flush=True)
+    # print("OSC:", address, args, flush=True)
 
     if address == "/scene" and args:
         scene = str(args[0])
-
+        if scene == "idle":
+            sleep(2)
         if scene in ["idle", "listening", "thinking", "speaking"]:
             current_scene = scene
 
             if scene == "speaking" and len(args) > 1:
                 speaking_text = str(args[1])
 
-            print("CURRENT SCENE:", current_scene, flush=True)
-            print("SPEAKING TEXT:", speaking_text, flush=True)
+            # print("CURRENT SCENE:", current_scene, flush=True)
+            # print("SPEAKING TEXT:", speaking_text, flush=True)
 
 
 def osc_server_thread():
@@ -90,7 +91,7 @@ def osc_server_thread():
         d
     )
 
-    print("OSC listening on 9000", flush=True)
+    # print("OSC listening on 9000", flush=True)
     server.serve_forever()
 
 

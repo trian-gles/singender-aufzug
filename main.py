@@ -564,7 +564,7 @@ def main() -> int:
             os.killpg(elevator_music_process.pid, signal.SIGTERM)
             try:
                 one_cycle(llm_generator)
-                sleep(3)
+                # sleep(3)
                 osc_interface_controller.idle()
             except Exception as exc:
                 print()
