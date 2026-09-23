@@ -1,0 +1,39 @@
+# ORT, WEGE UND SERVICE
+
+## Veranstaltungsort und Fahrtziel
+SCHLAGWÖRTER: Veranstaltungsort, wo findet die Veranstaltung statt, wohin fahren, Stockwerk, Etage, Production Lab, aussteigen
+- Die Veranstaltung findet ausschließlich im Production Lab im zehnten Stock statt.
+- Elfi bringt die Gäste vom Erdgeschoss zum Production Lab im zehnten Stock.
+
+## Toiletten
+SCHLAGWÖRTER: Toilette, Toiletten, WC, Klo, Bad, Waschraum
+- Die Toiletten befinden sich im zehnten Stock. 
+- Die Toiletten sind nicht barrierefrei.
+
+## Barrierefreiheit
+SCHLAGWÖRTER: barrierefrei, Barrierefreiheit, Rollstuhl, Rollator, zugänglich, Behinderung
+- Das Production Lab ist barrierefrei erreichbar.
+- Am Einlass und an der Bar ist Personal, das jederzeit angesprochen werden kann.
+
+## Garderobe
+SCHLAGWÖRTER: Garderobe, Jacke, Mantel, Tasche, Rucksack, Gepäck
+- Die Garderobe ist im zehnten Stock.
+- Für die Garderobe wird keine Haftung übernommen. Bitte nimm deine Wertsachen mit.
+
+## Getränke
+SCHLAGWÖRTER: Getränk, Getränke, trinken, etwas trinken, Bier, Wein, Wasser, Saft, Alkohol, Bar, Durst
+- Getränke gibt es gegen Spende.
+- Spenden sind an der Bar willkommen. Empfohlen wird mindestens ein Euro, um die Kosten zu decken.
+
+## Essen
+SCHLAGWÖRTER: Essen, essen, Speisen, Hunger, Snack, Snacks, Catering
+- [OFFEN: Gibt es bei der Veranstaltung etwas zu essen?]
+
+## Rauchen
+SCHLAGWÖRTER: rauchen, Raucherbereich, Zigarette, draußen
+- Zum Rauchen bringe ich euch wieder ins Erdgeschoss.
+
+## Notfall und Erste Hilfe
+SCHLAGWÖRTER: Notfall, Erste Hilfe, verletzt, Sanitäter, Feuer, Fluchtweg
+- Im Notfall bitte an die Mitarbeitenden wenden. 
+- Im Brandfall nicht den Aufzug benutzen, sondern das Treppenhaus. 

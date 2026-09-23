@@ -211,9 +211,10 @@ class LocalResponseGenerator:
         payload = {
             "prompt": prompt,
             "n_predict": 32,
-            "temperature": 0.6,
+            # Faktische Antworten sollen möglichst reproduzierbar bleiben.
+            "temperature": 0.15,
             "top_k": 20,
-            "top_p": 0.85,
+            "top_p": 0.75,
             "repeat_penalty": 1.1,
             "stop": ["\n"],
         }
@@ -350,7 +351,7 @@ class LocalResponseGenerator:
         ):
             return "Das Team im Production Lab hilft dir gerne weiter."
 
-        return DEFAULT_RESPONSE
+        return self.prompt_router.unknown_response()
 
     # ------------------------------------------------------------------
     # Echo-Erkennung  (unverändert)

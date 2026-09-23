@@ -9,7 +9,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 DIALOGUES_DIR = PROJECT_ROOT / "dialogues"
+KNOWLEDGE_DIR = CONFIG_DIR / "knowledge"
 PROGRAM_MEMORY_SECONDS = 45
+UNKNOWN_RESPONSES = (
+    "Das weiß ich nicht. Ich bin ja ein Aufzug und nicht Wikipedia.",
+    "Frag lieber die Menschen hier. Ich bin mir nicht sicher.",
+    "Da bin ich überfragt. Mit Stockwerken kenne ich mich besser aus.",
+    "Keine Ahnung. Mein Wissen fährt gerade in einem anderen Stockwerk.",
+    "Das kann ich nicht sicher sagen. Frag bitte das Team.",
+    "Diese Antwort hat meinen Aufzug verpasst. Frag lieber einen Menschen.",
+)
+UNKNOWN_RESPONSE = UNKNOWN_RESPONSES[0]
+
+KNOWLEDGE_STOPWORDS = {
+    "aber", "alle", "auch", "auf", "aus", "bei", "das", "dass", "dem",
+    "den", "der", "die", "ein", "eine", "einer", "einen", "einem", "es",
+    "für", "hat", "hier", "ich", "ihr", "ist", "man", "mit", "nach",
+    "oder", "sich", "sind", "über", "und", "vom", "von", "was", "welche",
+    "welcher", "welches", "wie", "wir", "wo", "zum", "zur", "etwas",
+}
 
 
 class PromptRouter:
@@ -30,7 +48,8 @@ class PromptRouter:
         "bader": "sonomathematische impulsarchitekten",
         "guan yanyi": "guan yanyi",
         "guan": "guan yanyi",
-        "jacob": "jacob",
+        "dai jianhua": "interaktive installationen und ausstellung von dai jianhua",
+        "dai": "interaktive installationen und ausstellung von dai jianhua",
         "liang yiyuan": "liang yiyuan",
         "liang": "liang yiyuan",
         "potluck": "potluck",
@@ -45,9 +64,11 @@ class PromptRouter:
         self,
         config_dir: Path = CONFIG_DIR,
         dialogues_dir: Path = DIALOGUES_DIR,
+        knowledge_dir: Path | None = None,
     ) -> None:
         self.config_dir = config_dir
         self.dialogues_dir = dialogues_dir
+        self.knowledge_dir = knowledge_dir or config_dir / "knowledge"
         self.last_program_entry: dict | None = None
         self.last_program_entry_at: float | None = None
         self.response_variants: dict[str, int] = {}
@@ -115,6 +136,11 @@ Elfi:"""
         category = self._classify(text)
 
         if category == "orientation":
+            if self._contains_any(
+                text,
+                ("wo bin ich", "wo sind wir", "welcher ort ist das"),
+            ):
+                return "Du bist im ligeti zentrum in Hamburg-Harburg."
             if self._contains_any(text, ("wie lange", "fahrt dauert")):
                 return "Die Fahrt dauert ungefähr dreißig Sekunden."
             if self._contains_any(
@@ -159,7 +185,7 @@ Elfi:"""
                 return "Ich wünsche dir einen vergnüglichen Abend!"
             if "danke" in text:
                 return "Sehr gern."
-            if self._contains_any(text, ("hallo", "hi", "moin", "guten tag", "guten abend")):
+            if self._is_greeting(text):
                 return "Einen wunderschönen guten Abend!"
 
         if "tanzen" in text:
@@ -168,6 +194,15 @@ Elfi:"""
             return "Nein. Am besten kenne ich mich mit dem heutigen Abend aus."
         if self._contains_any(text, ("noch einmal mitfahren", "nochmal mitfahren")):
             return "Komm gerne so oft du möchtest!"
+
+        # Sachfragen ohne belegten Treffer dürfen nicht frei beantwortet werden.
+        # Sobald in config/knowledge ein passender Fakt ergänzt wird, gelangt die
+        # Frage stattdessen mit genau diesem Beleg zum Sprachmodell.
+        if category == "general":
+            knowledge_answer = self._knowledge_direct_response(text)
+            if knowledge_answer:
+                return knowledge_answer
+            return self.unknown_response()
 
         return None
 
@@ -222,6 +257,10 @@ Elfi:"""
 
         return None
 
+    def unknown_response(self) -> str:
+        """Wählt eine freundliche, selbstironische Nichtwissen-Antwort."""
+        return self._choose_variant("fallback:unknown", list(UNKNOWN_RESPONSES))
+
     def _program_direct_response(self, text: str) -> str | None:
         """Beantwortet Programmfragen aus den lokalen, strukturierten Daten."""
 
@@ -236,6 +275,10 @@ Elfi:"""
         if next_response:
             return next_response
 
+        wide_response = self._program_wide_response(program, text)
+        if wide_response:
+            return wide_response
+
         entry = self._entry_for_question(program, text)
         if entry is None:
             return None
@@ -247,6 +290,7 @@ Elfi:"""
         genre = entry.get("genre")
         participants = entry.get("participants", [])
         description = entry.get("description")
+        instruments = entry.get("instruments", [])
 
         if self._contains_any(
             text,
@@ -269,6 +313,12 @@ Elfi:"""
         ) and genre:
             return f"{name} spielt {genre}."
 
+        if instruments and self._contains_any(
+            text,
+            ("instrument", "womit", "was spielt", "besetzung"),
+        ):
+            return self._instrument_answer(name, instruments)
+
         if self._contains_any(
             text,
             ("was macht", "erzähl", "erzaehl", "was ist", "wer ist", "mehr über", "mehr von"),
@@ -278,6 +328,90 @@ Elfi:"""
         # Die Nennung eines Acts ohne weitere Frage ist eine Einladung zu
         # einer kurzen, gesicherten Einführung.
         return self._short_program_description(name, genre, description, start)
+
+    def _program_wide_response(self, program: list, text: str) -> str | None:
+        """Beantwortet Fragen, die sich auf das gesamte Programm beziehen."""
+
+        if "gitarre" in text:
+            acts = []
+            for entry in program:
+                instruments = [
+                    str(value).casefold()
+                    for value in entry.get("instruments", [])
+                ]
+                if any(value in ("gitarre", "e-gitarre") for value in instruments):
+                    name = str(entry.get("name", "")).strip()
+                    if name:
+                        acts.append(name)
+            if acts:
+                examples = acts[:3]
+                if len(examples) == 1:
+                    act_text = examples[0]
+                else:
+                    act_text = ", ".join(examples[:-1])
+                    act_text += f" und {examples[-1]}"
+                return f"Gitarre hörst du bei {act_text}."
+
+        if "zither" in text:
+            acts = [
+                str(entry.get("name", "")).strip()
+                for entry in program
+                if any(
+                    str(value).casefold() == "zither"
+                    for value in entry.get("instruments", [])
+                )
+            ]
+            if acts:
+                if len(acts) == 1:
+                    return f"Zither hörst du bei {acts[0]}."
+                return (
+                    "Zither hörst du bei den Sonomathematischen "
+                    "Impulsarchitekten und bei oscheat."
+                )
+
+        if self._contains_any(
+            text,
+            ("als letztes", "zum schluss", "den abschluss", "wer beendet"),
+        ):
+            artists = [
+                entry for entry in program
+                if entry.get("type") != "installation" and entry.get("name")
+            ]
+            if artists:
+                last = artists[-1]
+                name = str(last["name"]).replace(" & ", " und ")
+                start = last.get("start")
+                if start:
+                    return f"Zum Abschluss hörst du {name} um {start} Uhr."
+                return f"Zum Abschluss hörst du {name}."
+
+        if "instrument" in text and not self._find_artist(text):
+            available = {
+                str(value).casefold()
+                for entry in program
+                for value in entry.get("instruments", [])
+            }
+            preferred = [
+                ("Zither", "zither"),
+                ("Gitarren", "gitarre"),
+                ("Mundharmonika", "mundharmonika"),
+                ("Synthesizer", "synthesizer"),
+                ("Yangqin", "yangqin"),
+                ("Suona", "suona"),
+            ]
+            names = [
+                label for label, needle in preferred
+                if any(needle in value for value in available)
+            ]
+            if names:
+                instrument_text = ", ".join(names[:-1])
+                if len(names) > 1:
+                    instrument_text += f" und {names[-1]}"
+                else:
+                    instrument_text = names[0]
+                return f"Heute hörst du unter anderem {instrument_text}."
+
+        return None
 
     def _entry_for_question(self, program: list, text: str) -> dict | None:
         artist = self._find_artist(text)
@@ -347,6 +481,15 @@ Elfi:"""
                 f"Bei {name} sind {people} mit dabei.",
             ],
         )
+
+    @staticmethod
+    def _instrument_answer(name: str, instruments: list[str]) -> str:
+        if len(instruments) == 1:
+            instrument_text = instruments[0]
+        else:
+            instrument_text = ", ".join(instruments[:-1])
+            instrument_text += f" und {instruments[-1]}"
+        return f"Bei {name} sind {instrument_text} zu hören."
 
     def _choose_variant(self, key: str, options: list[str]) -> str:
         index = self.response_variants.get(key, 0)
@@ -431,7 +574,7 @@ Elfi:"""
             text,
             (
                 "wann", "uhr", "wie lange", "bis wann", "endet",
-                "wer", "mit wem", "besetzung", "welche musik",
+                "wer", "mit wem", "besetzung", "instrument", "womit", "welche musik",
                 "was für musik", "genre", "musikrichtung", "was macht",
                 "erzähl", "erzaehl", "mehr über",
             ),
@@ -445,10 +588,14 @@ Elfi:"""
         if not isinstance(event_data, dict):
             return None
 
-        name = event_data.get("name", "SuedKultur Music-Night")
+        name = event_data.get("name", "Südkultur Music-Night")
         start = event_data.get("start")
         price = event_data.get("price")
         genres = event_data.get("genres", [])
+        location = event_data.get("location")
+        room = event_data.get("room")
+        floor = event_data.get("floor")
+        subtitle = event_data.get("subtitle")
 
         if self._contains_any(
             text,
@@ -481,9 +628,33 @@ Elfi:"""
             return f"Der Eintritt kostet {price}."
         if self._contains_any(text, ("wann beginnt", "wann geht", "beginn", "startet", "start")) and start:
             return f"Das Programm beginnt um {start}."
+        if self._contains_any(
+            text,
+            ("wo findet", "wo ist die veranstaltung", "veranstaltungsort"),
+        ):
+            if room and floor:
+                return f"Die Veranstaltung findet im {room} im {floor} statt."
+            if location:
+                return f"Die Veranstaltung findet im {location} statt."
         if self._contains_any(text, ("musik", "genre", "musikrichtung")) and genres:
-            return f"Heute gibt es {', '.join(genres[:3])} und mehr."
-        if self._contains_any(text, ("was passiert heute", "was ist heute", "veranstaltung", "music night", "music-night", "südkultur", "suedkultur", "programm", "konzert", "jam session")):
+            return (
+                "Heute reicht das musikalische Menü von Improvisation und "
+                "Avantgarde-Pop bis zu Jazz, Irish Folk und elektronischer Klangforschung."
+            )
+        if self._contains_any(
+            text,
+            ("was passiert hier", "was ist denn los", "was ist los", "was passiert heute", "was ist heute", "warum bin ich heute hier"),
+        ):
+            title = str(subtitle or name).rstrip(".!?")
+            return self._choose_variant(
+                "event:overview",
+                [
+                    f"Heute erwartet dich {title}: ein musikalisches Dinner von experimenteller Improvisation bis Irish Folk.",
+                    "Hier gibt es heute Konzerte, interaktive Installationen und eine gemeinsame Jam-Session.",
+                    f"Heute steigt die {name} mit vielfältiger Musik, Kunst und einer Jam-Session.",
+                ],
+            )
+        if self._contains_any(text, ("veranstaltung", "music night", "music-night", "südkultur", "suedkultur", "programm", "konzert", "jam session")):
             return f"Heute findet die {name} statt."
 
         return None
@@ -507,8 +678,10 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
     def _base_rules(self) -> str:
         return (
             "Antworte auf Deutsch mit höchstens zwei kurzen Sätzen.\n"
-            "Nutze nur die relevanten Informationen.\n"
-            "Erfinde keine weiteren Fakten.\n"
+            "Jede Sachbehauptung muss wörtlich durch die relevanten Informationen belegt sein.\n"
+            "Erfinde, ergänze oder vermute keine Fakten.\n"
+            "Wenn die Informationen nicht ausreichen, gib das freundlich und selbstironisch zu "
+            "und verweise auf die Menschen vor Ort.\n"
             "Verwende keine Regieanweisungen oder eckigen Klammern.\n"
             "Gib ausschließlich Elfis Antwort aus."
         )
@@ -523,6 +696,9 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             text,
             (
                 "wo fahren",
+                "wo bin ich",
+                "wo sind wir",
+                "welcher ort ist das",
                 "wohin",
                 "welcher stock",
                 "welchen stock",
@@ -545,6 +721,10 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             text,
             (
                 "was passiert heute",
+                "was passiert hier",
+                "was ist denn los",
+                "was ist los",
+                "warum bin ich heute hier",
                 "was ist heute",
                 "veranstaltung",
                 "music night",
@@ -586,14 +766,9 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
         ):
             return "identity"
 
-        if self._contains_any(
+        if self._is_greeting(text) or self._contains_any(
             text,
             (
-                "hallo",
-                "hi",
-                "moin",
-                "guten tag",
-                "guten abend",
                 "wie geht",
                 "freue mich",
                 "gespannt",
@@ -616,14 +791,20 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
         category: str,
         transcript: str,
     ) -> str:
+        searched_context = self._knowledge_context(transcript)
+
         if category == "orientation":
-            return self._orientation_context()
+            return self._join_context(self._orientation_context(), searched_context)
 
         if category == "event":
-            return self._event_context(transcript)
+            return self._join_context(
+                self._event_context(transcript), searched_context
+            )
 
         if category == "artist":
-            return self._artist_context(transcript)
+            return self._join_context(
+                self._artist_context(transcript), searched_context
+            )
 
         if category == "identity":
             return """Elfi ist ein singender Aufzug im ligeti zentrum.
@@ -637,8 +818,121 @@ Elfi ist keine allgemeine Assistenz und kein gewöhnlicher Chatbot."""
 
 Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
 
-        return """Elfi kennt sich vor allem mit dem ligeti zentrum,
-der heutigen Veranstaltung und der Aufzugsfahrt aus."""
+        return searched_context
+
+    @staticmethod
+    def _join_context(*parts: str) -> str:
+        unique: list[str] = []
+        for part in parts:
+            cleaned = part.strip()
+            if cleaned and cleaned not in unique:
+                unique.append(cleaned)
+        return "\n\n".join(unique)
+
+    def _knowledge_context(self, transcript: str) -> str:
+        """Durchsucht alle Wissensdateien und liefert nur belegte Treffer.
+
+        Das Format ist absichtlich redaktionell einfach. Jeder ``##``-Abschnitt
+        kann eine ``SCHLAGWÖRTER:``-Zeile und beliebig viele Fakten enthalten.
+        Platzhalter mit ``[OFFEN:`` gelten nie als Wissen.
+        """
+        query = self._search_tokens(transcript)
+        if not query or not self.knowledge_dir.is_dir():
+            return ""
+
+        matches: list[tuple[int, str, str]] = []
+        for path in sorted(self.knowledge_dir.glob("*.txt")):
+            if path.name.casefold() == "readme.txt":
+                continue
+            for title, keywords, facts in self._knowledge_sections(path):
+                keyword_text = " ".join(keywords)
+                keyword_tokens = self._search_tokens(keyword_text)
+                fact_text = " ".join(facts)
+                fact_tokens = self._search_tokens(f"{title} {fact_text}")
+
+                exact_hits = sum(
+                    1 for keyword in keywords
+                    if self._normalize_search_text(keyword) in
+                    self._normalize_search_text(transcript)
+                )
+                score = (
+                    exact_hits * 6
+                    + len(query & keyword_tokens) * 3
+                    + len(query & fact_tokens)
+                )
+                if score >= 3 and facts:
+                    matches.append((score, title, fact_text))
+
+        if not matches:
+            return ""
+
+        matches.sort(key=lambda item: (-item[0], item[1].casefold()))
+        selected = matches[:2]
+        return "\n".join(
+            f"{title}: {facts}" for _, title, facts in selected
+        )[:1200]
+
+    def _knowledge_direct_response(self, transcript: str) -> str:
+        """Gibt einen redaktionellen Fakt ohne kreative LLM-Erweiterung aus."""
+        context = self._knowledge_context(transcript)
+        if not context:
+            return ""
+        first_match = context.splitlines()[0]
+        answer = first_match.split(": ", 1)[-1].strip()
+        sentences = re.split(r"(?<=[.!?])\s+", answer)
+        return sentences[0].strip()
+
+    @staticmethod
+    def _knowledge_sections(path: Path) -> list[tuple[str, list[str], list[str]]]:
+        text = path.read_text(encoding="utf-8")
+        sections: list[tuple[str, list[str], list[str]]] = []
+        title = ""
+        keywords: list[str] = []
+        facts: list[str] = []
+
+        def finish() -> None:
+            if title:
+                sections.append((title, keywords.copy(), facts.copy()))
+
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if line.startswith("## "):
+                finish()
+                title = line[3:].strip()
+                keywords = []
+                facts = []
+                continue
+            if not title or not line or line.startswith("#"):
+                continue
+            if line.upper().startswith("SCHLAGWÖRTER:"):
+                keywords = [
+                    item.strip() for item in line.split(":", 1)[1].split(",")
+                    if item.strip()
+                ]
+                continue
+            if "[OFFEN:" in line.upper():
+                continue
+            if line.startswith("-"):
+                fact = line[1:].strip()
+                if fact:
+                    facts.append(fact)
+
+        finish()
+        return sections
+
+    @staticmethod
+    def _normalize_search_text(text: str) -> str:
+        normalized = text.casefold()
+        normalized = normalized.replace("ä", "ae").replace("ö", "oe")
+        normalized = normalized.replace("ü", "ue").replace("ß", "ss")
+        return re.sub(r"[^a-z0-9 ]+", " ", normalized)
+
+    @classmethod
+    def _search_tokens(cls, text: str) -> set[str]:
+        return {
+            token for token in cls._normalize_search_text(text).split()
+            if len(token) >= 3 and token not in KNOWLEDGE_STOPWORDS
+        }
 
     def _orientation_context(self) -> str:
         return """Das ligeti zentrum befindet sich in Hamburg-Harburg.
@@ -657,11 +951,11 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
         if not isinstance(event_data, dict):
             return (
-                "Heute findet die SuedKultur Music-Night statt. "
+                "Heute findet die Südkultur Music-Night statt. "
                 "Das Programm beginnt um 17:15 Uhr."
             )
 
-        name = event_data.get("name", "SuedKultur Music-Night")
+        name = event_data.get("name", "Südkultur Music-Night")
         start = event_data.get("start")
         price = event_data.get("price")
         location = event_data.get("location")
@@ -917,11 +1211,22 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
         )
 
     @staticmethod
+    def _is_greeting(text: str) -> bool:
+        return bool(re.search(
+            r"\b(hallo|hi|moin|guten tag|guten abend)\b",
+            text,
+            flags=re.IGNORECASE,
+        ))
+
+    @staticmethod
     def _normalize_input(text: str) -> str:
         normalized = " ".join(text.split()).strip()
         # Whisper schreibt das Fragewort gelegentlich als "wehm".
         normalized = re.sub(
             r"\bwehm\b", "wem", normalized, flags=re.IGNORECASE
+        )
+        normalized = re.sub(
+            r"\bzitter\b", "Zither", normalized, flags=re.IGNORECASE
         )
         return re.sub(
             r"\bliber\b", "lieber", normalized, flags=re.IGNORECASE

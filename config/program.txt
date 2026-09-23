@@ -1,128 +1,63 @@
 program = [
     {
-        "start": "17:00",
-        "end": None,
-        "name": "Interaktive Installationen",
-        "type": "installation",
-        "genre": None,
-        "description": "Interaktive Installationen im ligeti zentrum.",
-        "participants": [],
+        "start": "17:00", "end": None,
+        "name": "Interaktive Installationen und Ausstellung von Dai Jianhua",
+        "type": "installation", "genre": "Interaktive Kunst und Ölmalerei",
+        "description": "Neben interaktiven Installationen werden Arbeiten des chinesischen Ölmalers Dai Jianhua gezeigt.",
+        "participants": ["Dai Jianhua"], "instruments": [],
     },
     {
-        "start": "17:15",
-        "end": "17:45",
+        "start": "17:15", "end": "17:45",
         "name": "Sonomathematische Impulsarchitekten",
-        "type": "artist",
-        "genre": "Free Noise Improvisation",
+        "subtitle": "Impulse Pattern Formulation",
+        "type": "artist", "genre": "Free Noise Improvisation",
         "description": (
-            "Simon Linke und Rolf Bader improvisieren mit einem "
-            "mathematischen Algorithmus, der wie ein virtueller "
+            "Simon Linke und Rolf Bader musizieren mit der Impulse Pattern "
+            "Formulation, einem mathematischen Algorithmus, der als virtueller "
             "Mitmusiker auf ihre Impulse reagiert."
         ),
-        "participants": [
-            "Simon Linke",
-            "Rolf Bader",
-        ],
+        "participants": ["Simon Linke", "Rolf Bader"],
+        "instruments": ["Zither", "Keyboard", "Midi-Gitarre", "elektronische Klangerzeugung"],
     },
     {
-        "start": "18:00",
-        "end": "18:20",
-        "name": "Guan Yanyi",
-        "type": "artist",
-        "genre": "Gesang und Instrumentalmusik",
-        "description": (
-            "Guan Yanyi vertont alte chinesische Gedichte mit Gesang, "
-            "Gitarre, Mundharmonika und Synthesizer."
-        ),
-        "participants": [
-            "Guan Yanyi",
-            "Dai Jianhua",
-        ],
+        "start": "18:00", "end": "18:20", "name": "Guan Yanyi",
+        "type": "artist", "genre": "Gesang und Instrumentalmusik",
+        "description": "Guan Yanyi vertont Texte aus alten chinesischen Gedichten und verbindet traditionelle Melodien mit moderner Ästhetik.",
+        "participants": ["Guan Yanyi"],
+        "instruments": ["Gesang", "Gitarre", "Mundharmonika", "Synthesizer"],
     },
     {
-        "start": "18:30",
-        "end": "18:50",
-        "name": "Jacob",
-        "type": "artist",
-        "genre": None,
-        "description": None,
-        "participants": [
-            "Jacob",
-        ],
+        "start": "18:35", "end": "19:05", "name": "Liang Yiyuan",
+        "type": "artist", "genre": "Zeitgenössische Improvisation mit modifizierten Instrumenten",
+        "description": "Liang Yiyuan verbindet modifizierte chinesische Instrumente mit Gitarre und selbstgebauten Klangobjekten zu einer experimentellen Klangsprache.",
+        "participants": ["Liang Yiyuan"],
+        "instruments": ["modifiziertes Yangqin", "modifizierte Suona", "Gitarre", "Klangobjekte"],
     },
     {
-        "start": "19:00",
-        "end": "19:30",
-        "name": "Liang Yiyuan",
-        "type": "artist",
-        "genre": "Zeitgenössische Improvisation",
-        "description": (
-            "Liang Yiyuan spielt modifizierte chinesische Instrumente, "
-            "Gitarre und selbstgebaute Klangobjekte."
-        ),
-        "participants": [
-            "Liang Yiyuan",
-            "Dai Jianhua",
-        ],
+        "start": "19:30", "end": "20:00", "name": "Potluck",
+        "type": "jam_session", "genre": "Jam-Session",
+        "description": "Bei Potluck treffen unterschiedliche musikalische Stile, Einflüsse, Instrumente und Gerätschaften in einer gemeinsamen Jam-Session aufeinander.",
+        "participants": [], "instruments": [],
     },
     {
-        "start": "19:50",
-        "end": "20:20",
-        "name": "Potluck",
-        "type": "jam_session",
-        "genre": "Jam-Session",
-        "description": (
-            "Bei Potluck treffen unterschiedliche musikalische Stile, "
-            "Instrumente und Gerätschaften in einer gemeinsamen "
-            "Jam-Session aufeinander."
-        ),
-        "participants": [],
+        "start": "20:10", "end": "20:40", "name": "oscheat",
+        "type": "artist", "genre": "Conceptual Improvisation",
+        "description": "Mit einem Interface auf Basis von Open Sound Control können die Musiker direkt die Instrumente der anderen mitsteuern.",
+        "participants": ["Moritz Wesp", "Eric Haupt", "Victor Gelling", "Simon Linke"],
+        "instruments": ["virtuelle Posaune", "Keytar", "Midi-Gitarre", "Modular-Synthesizer", "Zither"],
     },
     {
-        "start": "20:30",
-        "end": "21:00",
-        "name": "oscheat",
-        "type": "artist",
-        "genre": "Conceptual Improvisation",
-        "description": (
-            "Bei oscheat können Musiker die Instrumente der anderen "
-            "über ein digitales Interface mitsteuern."
-        ),
-        "participants": [
-            "Moritz Wesp",
-            "Eric Haupt",
-            "Victor Gelling",
-            "Simon Linke",
-        ],
+        "start": "21:00", "end": "21:45", "name": "Clarks Planet",
+        "type": "artist", "genre": "Avantgarde-Pop",
+        "description": "Clarks Planet verbindet Gesang, E-Gitarre, Drums, Performance, räumliche Audioeffekte und Visuals.",
+        "participants": ["Clarks Planet", "Kieran McAuliffe", "Kollektiv Visuell"],
+        "instruments": ["Gesang", "E-Gitarre", "Drums", "Spatial-Audio-Effekte", "Visuals"],
     },
     {
-        "start": "21:15",
-        "end": "22:00",
-        "name": "Clarks Planet",
-        "type": "artist",
-        "genre": "Avantgarde-Pop",
-        "description": (
-            "Clarks Planet verbindet Gesang, E-Gitarre, Drums, "
-            "räumliche Audioeffekte und Visuals."
-        ),
-        "participants": [
-            "Clara Nebel",
-            "Kieran McAuliffe",
-            "Kollektiv Visuell",
-        ],
-    },
-    {
-        "start": "22:10",
-        "end": "23:00",
-        "name": "Kieran McAuliffe & Friends",
-        "type": "artist",
+        "start": "22:00", "end": "22:50",
+        "name": "Kieran McAuliffe & Friends", "type": "artist",
         "genre": "Jazz und Irish Folk",
-        "description": (
-            "Kieran McAuliffe verbindet irische Folkmusik "
-            "mit improvisatorischem Jazz."
-        ),
-        "participants": [
-            "Kieran McAuliffe",
-        ],
+        "description": "Kieran McAuliffes Programm verbindet die sehnsuchtsvollen Melodien irischer Folkmusik mit der Experimentierlust des Jazz.",
+        "participants": ["Kieran McAuliffe"], "instruments": [],
     },
 ]
