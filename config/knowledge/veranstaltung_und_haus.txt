@@ -5,7 +5,7 @@ SCHLAGWÖRTER: Veranstaltung, Südkultur Music-Night, Klang à la Carte, Konzert
 - Heute findet die Südkultur Music-Night im ligeti zentrum statt.
 - Das Motto lautet Klang à la Carte.
 - Die Veranstaltung findet ausschließlich im Production Lab im zehnten Stock statt.
-- Die Veranstaltung findet am zehnten Oktober statt. 
+- Die Veranstaltung findet am zehnten Oktober statt.
 - Zur Südkultur Music-Night lädt das ligeti zentrum Künstlerinnen und Künstler mit unterschiedlichen Handschriften und Einflüssen zu einem musikalischen Dinner.
 - Das Programm reicht von mathematisch beeinflussten Klanglandschaften und vertonten chinesischen Gedichten bis zu Instrumenten, die sich gegenseitig steuern.
 - Das musikalische Menü umfasst freie Improvisation, Avantgarde-Pop, Jazz, Irish Folk, elektronische Klangforschung und eine Jam-Session.
@@ -15,16 +15,20 @@ SCHLAGWÖRTER: Veranstaltung, Südkultur Music-Night, Klang à la Carte, Konzert
 SCHLAGWÖRTER: Einlass, Eintritt, Ticket, Tickets, Abendkasse, Reservierung, Preis
 - Der Eintritt kostet 7,50 Euro.
 - Der Einlass beginnt um 17:00 Uhr.
-- [OFFEN: Informationen zu Abendkasse, Reservierung oder Ausverkauf ergänzen.]
+- Die Veranstaltung endet um 23:00 Uhr.
 
 ## ligeti zentrum
-SCHLAGWÖRTER: ligeti zentrum, Haus, Gebäude, Institution, Forschung, Hamburg-Harburg
+SCHLAGWÖRTER: ligeti zentrum, Haus, Gebäude, Institution, Transferzentrum, Forschung, Hamburg-Harburg, György Ligeti, Hochschulen
 - Das ligeti zentrum befindet sich in Hamburg-Harburg.
-- [OFFEN: Kurze Selbstbeschreibung des ligeti zentrums ergänzen.]
-- [OFFEN: Website oder weitere Informationsstelle ergänzen, falls Elfi sie nennen soll.]
+- „ligeti“ ist ein Akronym für Laboratorien für Innovationen und Gesellschaftliche Entwicklung durch den Transfer von Ideen.
+- Das ligeti zentrum ist ein Transferzentrum und nach György Ligeti benannt.
+- Das ligeti zentrum möchte Künste, Wissenschaft, Gesundheit und Technologie unter einem Dach vereinen.
+- Ziel des ligeti zentrums ist es, neue Denk- und Handlungsräume zu eröffnen und den Dialog zwischen Wissenschaft, Politik und Zivilgesellschaft zu fördern.
+- György Ligeti war Komponist und Professor an der Hochschule für Musik und Theater.
+- Das ligeti zentrum ist ein Verbundprojekt von vier Hamburger Hochschulen: dem Universitätsklinikum Eppendorf, der Technischen Universität Hamburg, der Hochschule für Angewandte Wissenschaften und der Hochschule für Musik und Theater.
 
 ## Production Lab
-SCHLAGWÖRTER: Production Lab, Raum, Labor, zehnter Stock
+SCHLAGWÖRTER: Production Lab, Raum, Labor, zehnter Stock, 3D-Audio, Komposition, Hörerlebnisse
 - Das Production Lab befindet sich im zehnten Stock.
-- [OFFEN: Wofür wird das Production Lab normalerweise genutzt?]
-- [OFFEN: Was ist an diesem Raum oder seiner Technik besonders?]
+- Das Production Lab ist mit einer hochwertigen 3D-Audioanlage und vielen Lautsprechern ausgestattet.
+- Das Production Lab eröffnet neue Möglichkeiten für Komposition und lädt zu neuen Hörerlebnissen ein.
