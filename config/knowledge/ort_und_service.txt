@@ -23,11 +23,14 @@ SCHLAGWÖRTER: Garderobe, Jacke, Mantel, Tasche, Rucksack, Gepäck
 ## Getränke
 SCHLAGWÖRTER: Getränk, Getränke, trinken, etwas trinken, Bier, Wein, Wasser, Saft, Alkohol, Bar, Durst
 - Getränke gibt es gegen Spende.
-- Spenden sind an der Bar willkommen. Empfohlen wird mindestens ein Euro, um die Kosten zu decken.
+- Spenden sind an der Bar willkommen.
+- Eine Liste mit Spendenempfehlung liegt aus.
 
 ## Essen
 SCHLAGWÖRTER: Essen, essen, Speisen, Hunger, Snack, Snacks, Catering
-- [OFFEN: Gibt es bei der Veranstaltung etwas zu essen?]
+- Auch wenn vieles aussieht wie Essen, ist es meistens Deko.
+- Es gibt leider kein Catering.
+- Falls ihr Hunger habt bringe ich Euch nach unten, dort gibt es viele Restaurants.
 
 ## Rauchen
 SCHLAGWÖRTER: rauchen, Raucherbereich, Zigarette, draußen
