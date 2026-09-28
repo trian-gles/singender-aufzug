@@ -10,6 +10,10 @@ Nur Ctrl+C beendet das Programm.
 
 from __future__ import annotations
 
+try:
+    from gpiozero import Button
+except:
+    print("No configured gpiozero library")
 import argparse
 import re
 import shutil
@@ -525,6 +529,7 @@ def main() -> int:
     parser.add_argument("text", nargs="*")
     parser.add_argument("--bpm", type=int, default=BPM)
     parser.add_argument("--diagnostics", action="store_true")
+    parser.add_argument("-b", "--button", action='store_true')
     args = parser.parse_args()
 
     text_arg = " ".join(args.text).strip()
@@ -532,6 +537,9 @@ def main() -> int:
         # Direct mode: sing only, no LLM, no recording
         render_text(text_arg, args.bpm, args.diagnostics)
         return 0
+    BUTTON_OPERATED = args.button
+    if BUTTON_OPERATED:
+        button = Button(16)
 
     # ------------------------------------------------------------------
     # Interaktiver LLM-Modus
@@ -560,7 +568,10 @@ def main() -> int:
             print(f"       CYCLE {cycle}")
             print("=" * 54)
             elevator_music_process = play_audio_loop_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elevator-music.wav"))
-            input("\nPress ENTER to record (or Ctrl+C to quit).")
+            if BUTTON_OPERATED:
+                button.wait_for_press()
+            else:
+                input("\nPress ENTER to record (or Ctrl+C to quit).")
             os.killpg(elevator_music_process.pid, signal.SIGTERM)
             try:
                 one_cycle(llm_generator)
