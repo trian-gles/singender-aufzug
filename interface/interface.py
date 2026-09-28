@@ -137,10 +137,10 @@ class BottomText(Effect):
             text = "Drück die Taste und stell eine Frage!"
 
         elif self.scene_name == "listening":
-            text = "Hören..."
+            text = "Ich höre zu..."
 
         elif self.scene_name == "thinking":
-            text = "Denken..."
+            text = "Ich denke nach..."
 
         elif self.scene_name == "speaking":
             text = speaking_text
