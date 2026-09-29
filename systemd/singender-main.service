@@ -1,0 +1,19 @@
+[Unit]
+Description=Singender Aufzug Main
+Requires=llm.service
+After=llm.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/singender-aufzug
+
+ExecStartPre=/bin/bash -c 'until /usr/bin/curl -sf http://127.0.0.1:8080/health >/dev/null; do sleep 2; done'
+
+ExecStart=/home/pi/singender-aufzug/.venv/bin/python /home/pi/singender-aufzug/main.py --button
+
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

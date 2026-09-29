@@ -1,0 +1,8 @@
+[Unit]
+Description=Local llm
+
+[Service]
+ExecStart=/home/pi/singender-aufzug/models/llm/run_server.sh
+
+[Install]
+WantedBy=multi-user.target

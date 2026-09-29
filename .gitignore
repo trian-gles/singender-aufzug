@@ -4,7 +4,8 @@ __pycache__/
 aufnahme.wav
 singender_aufzug.wav
 *.gguf
-models/
+models/**/*.gguf
+models/**/*.bin
 *.zip
 *.tar.gz
 .DS_Store
