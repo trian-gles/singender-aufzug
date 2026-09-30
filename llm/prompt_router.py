@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import re
+from difflib import SequenceMatcher
 from time import monotonic
 from pathlib import Path
 
@@ -27,6 +28,10 @@ KNOWLEDGE_STOPWORDS = {
     "für", "hat", "hier", "ich", "ihr", "ist", "man", "mit", "nach",
     "oder", "sich", "sind", "über", "und", "vom", "von", "was", "welche",
     "welcher", "welches", "wie", "wir", "wo", "zum", "zur", "etwas",
+}
+ASR_INTENT_STOPWORDS = {
+    "wann", "spielt", "spielt", "wer", "ist", "sind", "was", "wie",
+    "wo", "uhr", "beginnt", "startet", "zeit", "heute", "morgen",
 }
 
 
@@ -80,6 +85,7 @@ class PromptRouter:
             "/no_think",
             self._base_persona(),
             self._base_rules(),
+            self._asr_interpretation_context(transcript),
         ]
 
         category = self._classify(transcript)
@@ -195,14 +201,15 @@ Elfi:"""
         if self._contains_any(text, ("noch einmal mitfahren", "nochmal mitfahren")):
             return "Komm gerne so oft du möchtest!"
 
-        # Sachfragen ohne belegten Treffer dürfen nicht frei beantwortet werden.
-        # Sobald in config/knowledge ein passender Fakt ergänzt wird, gelangt die
-        # Frage stattdessen mit genau diesem Beleg zum Sprachmodell.
+        # Sachfragen ohne belegten Treffer gehen zur LLM-Interpretation.  Das
+        # Modell erhält nur den belegten Kontext und darf erst danach einen
+        # freundlichen Nichtwissen-Hinweis geben. So werden kleine Whisper-
+        # Fehler nicht vorschnell als unbekannte Anfrage behandelt.
         if category == "general":
             knowledge_answer = self._knowledge_direct_response(text)
             if knowledge_answer:
                 return knowledge_answer
-            return self.unknown_response()
+            return None
 
         return None
 
@@ -332,6 +339,10 @@ Elfi:"""
     def _program_wide_response(self, program: list, text: str) -> str | None:
         """Beantwortet Fragen, die sich auf das gesamte Programm beziehen."""
 
+        time_response = self._program_at_time_response(program, text)
+        if time_response:
+            return time_response
+
         if "gitarre" in text:
             acts = []
             for entry in program:
@@ -410,6 +421,69 @@ Elfi:"""
                 else:
                     instrument_text = names[0]
                 return f"Heute hörst du unter anderem {instrument_text}."
+
+        return None
+
+    def _program_at_time_response(self, program: list, text: str) -> str | None:
+        """Findet den Act, der zu einer ausdrücklich genannten Uhrzeit läuft."""
+
+        # Whisper verwechselt „um“ häufig mit „im“ und verschluckt bei
+        # „wer spielt“ gelegentlich Leerzeichen. Die Uhrzeit selbst ist
+        # deshalb das sichere Signal für eine Programmsuche.
+        match = re.search(
+            r"\b(?:um|im)\s+(\d{1,2})(?::(\d{2}))?\s*uhr\b",
+            text,
+        )
+        if not match:
+            return None
+
+        requested_minutes = int(match.group(1)) * 60 + int(match.group(2) or 0)
+
+        def to_minutes(value: object) -> int | None:
+            if not isinstance(value, str):
+                return None
+            time_match = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+            if not time_match:
+                return None
+            return int(time_match.group(1)) * 60 + int(time_match.group(2))
+
+        scheduled_entries: list[tuple[int, int | None, str]] = []
+        for entry in program:
+            if not isinstance(entry, dict):
+                continue
+            start = to_minutes(entry.get("start"))
+            end = to_minutes(entry.get("end"))
+            name = str(entry.get("name", "")).strip()
+            if not name or start is None:
+                continue
+            scheduled_entries.append((start, end, name))
+            if (end is None and requested_minutes == start) or (
+                end is not None and start <= requested_minutes < end
+            ):
+                return f"Um {match.group(1)}:{match.group(2) or '00'} Uhr spielt {name}."
+
+        previous = max(
+            (
+                entry for entry in scheduled_entries
+                if entry[1] is not None and entry[1] <= requested_minutes
+            ),
+            default=None,
+            key=lambda entry: entry[1] or -1,
+        )
+        following = min(
+            (
+                entry for entry in scheduled_entries
+                if entry[0] > requested_minutes
+            ),
+            default=None,
+            key=lambda entry: entry[0],
+        )
+        if previous and following:
+            return (
+                f"Um {match.group(1)}:{match.group(2) or '00'} Uhr ist gerade "
+                f"eine kurze Pause. Danach spielt {following[2]} um "
+                f"{following[0] // 60:02d}:{following[0] % 60:02d} Uhr."
+            )
 
         return None
 
@@ -682,9 +756,106 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             "Erfinde, ergänze oder vermute keine Fakten.\n"
             "Wenn die Informationen nicht ausreichen, gib das freundlich und selbstironisch zu "
             "und verweise auf die Menschen vor Ort.\n"
+            "Wenn du eine Zeitspanne nennst, gib immer Anfang und Ende vollständig an.\n"
             "Verwende keine Regieanweisungen oder eckigen Klammern.\n"
             "Gib ausschließlich Elfis Antwort aus."
         )
+
+    def _asr_interpretation_context(self, transcript: str) -> str:
+        """Hilft dem LLM, unsichere Whisper-Transkripte einzuordnen.
+
+        Der Router bleibt absichtlich strikt: Diese Hinweise dienen nur zur
+        Zuordnung zu den nachstehend genannten, belegten Namen und Fakten.
+        Sie erlauben keine frei erfundenen Details.
+        """
+
+        names = list(dict.fromkeys(self.ARTISTS.values()))
+        program_entries: list[dict] = []
+        program = self._read_assignment(
+            self.config_dir / "program.txt",
+            variable_name="program",
+        )
+        if isinstance(program, list):
+            names.extend(
+                str(entry.get("name", "")).strip()
+                for entry in program
+                if isinstance(entry, dict) and entry.get("name")
+            )
+        names = list(dict.fromkeys(name for name in names if name))
+        if isinstance(program, list):
+            program_entries = [
+                entry for entry in program if isinstance(entry, dict)
+            ]
+
+        candidate = self._asr_candidate(transcript, names)
+
+        context = (
+            "SPRACHERKENNUNG UND INTERPRETATION\n\n"
+            "Die Eingabe stammt aus automatischer Spracherkennung. Kleine "
+            "Fehler, fehlende Wörter und phonetisch ähnliche Schreibweisen "
+            "sind wahrscheinlich. Korrigiere offensichtliche Fehler "
+            "selbstständig, wenn sie eindeutig zu einem bekannten Begriff "
+            "passen. Interpretiere ähnliche Begriffe sinnvoll. Rate nicht: "
+            "Wenn keine eindeutige Zuordnung oder kein belegter Fakt vorliegt, "
+            "sage freundlich, dass die Menschen vor Ort weiterhelfen."
+        )
+
+        if not candidate:
+            return context
+
+        facts = []
+        for entry in program_entries:
+            if str(entry.get("name", "")).casefold() != candidate.casefold():
+                continue
+            details = [str(entry["name"])]
+            if entry.get("start"):
+                details.append(f"Beginn {entry['start']} Uhr")
+            if entry.get("end"):
+                details.append(f"Ende {entry['end']} Uhr")
+            if entry.get("genre"):
+                details.append(str(entry["genre"]))
+            facts.append(", ".join(details))
+
+        return (
+            context
+            + "\n\nMÖGLICHE ASR-ZUORDNUNG\n"
+            + f"{transcript} → möglicherweise {candidate}. Prüfe diese "
+            "Zuordnung anhand der belegten Programmdaten und verwende sie "
+            "nur bei passender Frage."
+            + ("\n\nBELEGTE PROGRAMMDATEN\n" + "\n".join(facts) if facts else "")
+        )
+
+    def _asr_candidate(self, transcript: str, names: list[str]) -> str:
+        """Ermittelt nur eindeutige phonetische Kandidaten für das LLM."""
+
+        query_tokens = [
+            token
+            for token in self._normalize_search_text(transcript).split()
+            if token not in ASR_INTENT_STOPWORDS
+        ]
+        if not query_tokens:
+            return ""
+
+        query = " ".join(query_tokens)
+        candidates = list(dict.fromkeys([*self.ARTISTS.keys(), *names]))
+        scored = [
+            (SequenceMatcher(None, query, self._normalize_search_text(name)).ratio(), name)
+            for name in candidates
+        ]
+        score, candidate = max(scored, default=(0.0, ""))
+        if score < 0.72:
+            return ""
+
+        canonical = next(
+            (
+                name
+                for name in names
+                if name.casefold() == candidate.casefold()
+                and name != name.casefold()
+            ),
+            self.ARTISTS.get(candidate, candidate),
+        )
+        return canonical
 
     def _classify(self, transcript: str) -> str:
         text = transcript.lower()

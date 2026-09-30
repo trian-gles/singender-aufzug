@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from llm.prompt_router import PromptRouter, UNKNOWN_RESPONSE, UNKNOWN_RESPONSES
+from llm.prompt_router import PromptRouter, UNKNOWN_RESPONSES
 
 
 class PromptRouterKnowledgeTests(unittest.TestCase):
@@ -32,10 +32,7 @@ class PromptRouterKnowledgeTests(unittest.TestCase):
             "- [OFFEN: Standort ergänzen.]\n",
             encoding="utf-8",
         )
-        self.assertEqual(
-            self.router().direct_response("Wo ist die Toilette?"),
-            UNKNOWN_RESPONSE,
-        )
+        self.assertIsNone(self.router().direct_response("Wo ist die Toilette?"))
 
     def test_filled_knowledge_is_selected_for_the_prompt(self) -> None:
         (self.knowledge_dir / "service.txt").write_text(
@@ -52,16 +49,15 @@ class PromptRouterKnowledgeTests(unittest.TestCase):
         prompt = router.build_prompt("Wo gibt es Trinkwasser?")
         self.assertIn("Trinkwasser gibt es an der Bar im Foyer.", prompt)
 
-    def test_unknown_general_fact_question_uses_safe_response(self) -> None:
-        self.assertEqual(
-            self.router().direct_response("Kann ich hier mein Fahrrad reparieren?"),
-            UNKNOWN_RESPONSE,
+    def test_unknown_general_fact_question_is_delegated_to_the_llm(self) -> None:
+        self.assertIsNone(
+            self.router().direct_response("Kann ich hier mein Fahrrad reparieren?")
         )
 
     def test_unknown_responses_rotate(self) -> None:
         router = self.router()
         answers = [
-            router.direct_response(f"Unbekannte Sachfrage Nummer {number}?")
+            router.unknown_response()
             for number in range(len(UNKNOWN_RESPONSES))
         ]
         self.assertEqual(tuple(answers), UNKNOWN_RESPONSES)
@@ -71,16 +67,26 @@ class PromptRouterKnowledgeTests(unittest.TestCase):
             "## Fahrrad\nSCHLAGWÖRTER: Fahrrad\n- Fahrräder stehen im Keller.\n",
             encoding="utf-8",
         )
-        self.assertEqual(
-            self.router().direct_response("Wo steht mein Fahrrad?"),
-            UNKNOWN_RESPONSE,
-        )
+        self.assertIsNone(self.router().direct_response("Wo steht mein Fahrrad?"))
 
     def test_hier_is_not_mistaken_for_hi(self) -> None:
-        self.assertEqual(
-            self.router().direct_response("Gibt es hier Schließfächer?"),
-            UNKNOWN_RESPONSE,
+        self.assertIsNone(
+            self.router().direct_response("Gibt es hier Schließfächer?")
         )
+
+    def test_asr_context_exposes_canonical_artist_names(self) -> None:
+        (self.config_dir / "program.txt").write_text(
+            "program = [{'name': 'Guan Yanyi', 'start': '18:00', "
+            "'end': '18:20', 'genre': 'Improvisation'}]\n",
+            encoding="utf-8",
+        )
+        router = self.router()
+        self.assertIsNone(router.direct_response("Wann spielt Juan Jani?"))
+        prompt = router.build_prompt("Wann spielt Juan Jani?")
+        self.assertIn("automatischer Spracherkennung", prompt)
+        self.assertIn("Guan Yanyi", prompt)
+        self.assertIn("Beginn 18:00 Uhr", prompt)
+        self.assertIn("möglicherweise Guan Yanyi", prompt)
 
     def test_event_location_remains_tenth_floor(self) -> None:
         self.assertEqual(

@@ -37,6 +37,22 @@ class CurrentProgramTests(unittest.TestCase):
         self.assertIn("18:35", answer)
         self.assertIn("19:05", answer)
 
+    def test_act_can_be_found_by_time_range(self) -> None:
+        answer = self.router.direct_response("Wer spielt um 19 Uhr?")
+        self.assertEqual(answer, "Um 19:00 Uhr spielt Liang Yiyuan.")
+
+    def test_whisper_variant_of_time_question_is_understood(self) -> None:
+        answer = self.router.direct_response("Werspielte im 19 Uhr")
+        self.assertEqual(answer, "Um 19:00 Uhr spielt Liang Yiyuan.")
+
+    def test_gap_announces_pause_and_next_act(self) -> None:
+        answer = self.router.direct_response("Was passiert um 20 Uhr?")
+        self.assertEqual(
+            answer,
+            "Um 20:00 Uhr ist gerade eine kurze Pause. "
+            "Danach spielt oscheat um 20:10 Uhr.",
+        )
+
     def test_instruments_can_be_answered(self) -> None:
         answer = self.router.direct_response(
             "Welche Instrumente spielt Guan Yanyi?"

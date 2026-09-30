@@ -26,12 +26,13 @@ MODEL_PATH = (
     PROJECT_ROOT
     / "models"
     / "llm"
-    / "Qwen3-1.7B-Q4_K_M.gguf"
+    / "Qwen3-4B-Q4_K_M.gguf"
 )
 
-SERVER_URL = "http://127.0.0.1:8080/completion"
+SERVER_URL = "http://127.0.0.1:8080/v1/chat/completions"
 SERVER_STARTUP_TIMEOUT = 60  # seconds
 SERVER_POLL_INTERVAL = 0.5   # seconds
+LLM_RESPONSE_TIMEOUT = 60    # seconds
 
 DEFAULT_RESPONSE = "Hallo, schön, dass du da bist."
 
@@ -209,14 +210,18 @@ class LocalResponseGenerator:
         prompt = self.prompt_router.build_prompt(transcript)
 
         payload = {
-            "prompt": prompt,
-            "n_predict": 32,
-            # Faktische Antworten sollen möglichst reproduzierbar bleiben.
-            "temperature": 0.15,
-            "top_k": 20,
-            "top_p": 0.75,
+            "messages": [{"role": "user", "content": prompt}],
+            "n_predict": 24,
+            # Etwas Spielraum hilft bei kleinen ASR-Fehlern, während der
+            # Prompt weiterhin nur belegte Fakten als Antwort zulässt.
+            "temperature": 0.25,
+            "top_k": 40,
+            "top_p": 0.9,
             "repeat_penalty": 1.1,
-            "stop": ["\n"],
+            # Qwen schreibt nach einem leeren <think></think>-Block einen
+            # Zeilenumbruch. Dieser darf die eigentliche Antwort nicht mehr
+            # vorzeitig beenden.
+            "stop": ["<|im_end|>"],
         }
 
         try:
@@ -227,7 +232,10 @@ class LocalResponseGenerator:
                 method="POST",
             )
 
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(
+                request,
+                timeout=LLM_RESPONSE_TIMEOUT,
+            ) as response:
                 result = json.loads(response.read().decode("utf-8"))
 
         except urllib.error.URLError as exc:
@@ -247,7 +255,11 @@ class LocalResponseGenerator:
                 source="fallback",
             )
 
-        raw_answer = result.get("content", "").strip()
+        choices = result.get("choices", [])
+        first_choice = choices[0] if choices else {}
+        raw_answer = (
+            first_choice.get("message", {}).get("content", "").strip()
+        )
 
         answer = self._clean_answer(raw_answer)
 

@@ -435,10 +435,14 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
         device="plughw:0,0",
     )
 
+    # VAD hat das Sprechende erkannt. Das Interface soll jetzt sofort aus
+    # dem Zuhörmodus wechseln, auch während Whisper noch transkribiert.
+    osc_interface_controller.thinking()
+
     print("STT: Transcribing entirely locally ...")
     print(f"{time() - t:.2f} Sec")
     t = time()
-    transcript = transcribe(RECORDING_FILE)
+    transcript = transcribe(RECORDING_FILE, model=WHISPER_MODEL_PATH)
     transcript = prepare_transcript(transcript)
 
     if not transcript:
@@ -454,7 +458,6 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     t_sprache_ende = time()
     t = time()
     waiting_music_process = play_audio_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elfi-denkt.wav"))
-    osc_interface_controller.thinking()
     # --- Elfi-Antwort ---
     result = generator.generate(transcript)
     answer = prepare_llm_answer(result.text)

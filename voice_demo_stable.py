@@ -43,7 +43,7 @@ def check_system():
         Path.home() / "whisper.cpp/build/bin/whisper-cli",
         Path.home() / "whisper.cpp/models/ggml-tiny.bin",
         Path.home() / "llama.cpp/build/bin/llama-server",
-        PROJECT_DIR / "models/llm/Qwen3-0.6B-Q8_0.gguf",
+        PROJECT_DIR / "models/llm/Qwen3-4B-Q4_K_M.gguf",
     ]
 
     for path in required_files:
