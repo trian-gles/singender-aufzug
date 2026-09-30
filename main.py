@@ -443,6 +443,7 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
 
     if not transcript:
         print("No intelligible text recognized – skipping.")
+        PLACEHOLDER
         return
 
     print()
@@ -576,12 +577,11 @@ def main() -> int:
             try:
                 one_cycle(llm_generator)
                 # sleep(3)
-                osc_interface_controller.idle()
             except Exception as exc:
                 print()
                 print(f"Error in cycle {cycle}: {exc}")
                 print("Starting next cycle ...")
-
+            osc_interface_controller.idle()
     except KeyboardInterrupt:
         os.killpg(elevator_music_process.pid, signal.SIGTERM)
         print("\n\nGoodbye! Elfi is signing off.")
