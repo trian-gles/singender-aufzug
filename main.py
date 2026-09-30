@@ -473,8 +473,10 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     print(f'  "{answer}"')
 
     # --- Gesang ---
-    singing_text = prepare_for_singing(answer)
-
+    if result.source == "lokal":
+        singing_text = answer
+    else:
+        singing_text = prepare_for_singing(answer)
     if not singing_text:
         print("No singable text could be generated from Elfi's answer.")
         return
