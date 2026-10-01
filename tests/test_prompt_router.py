@@ -49,6 +49,20 @@ class PromptRouterKnowledgeTests(unittest.TestCase):
         prompt = router.build_prompt("Wo gibt es Trinkwasser?")
         self.assertIn("Trinkwasser gibt es an der Bar im Foyer.", prompt)
 
+    def test_definition_question_prefers_definition_over_location(self) -> None:
+        (self.knowledge_dir / "haus.txt").write_text(
+            "## ligeti zentrum\n"
+            "SCHLAGWÖRTER: ligeti zentrum, Hamburg-Harburg\n"
+            "- Das ligeti zentrum befindet sich in Hamburg-Harburg.\n"
+            "- Das ligeti zentrum ist ein Transferzentrum.\n"
+            "- Es möchte Künste, Wissenschaft und Technologie unter einem Dach vereinen.\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            self.router().direct_response("Was ist das ligeti zentrum?"),
+            "Das ligeti zentrum ist ein Transferzentrum. Es möchte Künste, Wissenschaft und Technologie unter einem Dach vereinen.",
+        )
+
     def test_unknown_general_fact_question_is_delegated_to_the_llm(self) -> None:
         self.assertIsNone(
             self.router().direct_response("Kann ich hier mein Fahrrad reparieren?")

@@ -37,6 +37,11 @@ class CurrentProgramTests(unittest.TestCase):
         self.assertIn("18:35", answer)
         self.assertIn("19:05", answer)
 
+    def test_artist_portrait_question_uses_description(self) -> None:
+        answer = self.router.direct_response("Was weißt du über Simon Linke?")
+        self.assertIn("Simon Linke und Rolf Bader musizieren", answer)
+        self.assertIn("mathematischen Algorithmus", answer)
+
     def test_act_can_be_found_by_time_range(self) -> None:
         answer = self.router.direct_response("Wer spielt um 19 Uhr?")
         self.assertEqual(answer, "Um 19:00 Uhr spielt Liang Yiyuan.")

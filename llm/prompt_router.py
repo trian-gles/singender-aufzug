@@ -326,6 +326,14 @@ Elfi:"""
         ):
             return self._instrument_answer(name, instruments)
 
+        if isinstance(description, str) and description and self._contains_any(
+            text,
+            ("was weißt", "was weisst", "erzähl mir", "erzaehl mir", "mehr über"),
+        ):
+            # Bei einer Porträtfrage ist die hinterlegte Beschreibung
+            # aussagekräftiger als Genre und Startzeit.
+            return self._first_sentence(description)
+
         if self._contains_any(
             text,
             ("was macht", "erzähl", "erzaehl", "was ist", "wer ist", "mehr über", "mehr von"),
@@ -634,6 +642,11 @@ Elfi:"""
         if start:
             return f"{name} beginnt um {start} Uhr."
         return f"{name} ist heute im Programm."
+
+    @staticmethod
+    def _first_sentence(text: str) -> str:
+        """Liefert den ersten vollständigen, redaktionell geprüften Satz."""
+        return re.split(r"(?<=[.!?])\s+", text.strip())[0].strip()
 
     @staticmethod
     def _looks_like_program_followup(text: str) -> bool:
@@ -1045,6 +1058,10 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
 
     def _knowledge_direct_response(self, transcript: str) -> str:
         """Gibt einen redaktionellen Fakt ohne kreative LLM-Erweiterung aus."""
+        definition = self._knowledge_definition_response(transcript)
+        if definition:
+            return definition
+
         context = self._knowledge_context(transcript)
         if not context:
             return ""
@@ -1052,6 +1069,60 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
         answer = first_match.split(": ", 1)[-1].strip()
         sentences = re.split(r"(?<=[.!?])\s+", answer)
         return sentences[0].strip()
+
+    def _knowledge_definition_response(self, transcript: str) -> str:
+        """Beantwortet „Was ist …?“-Fragen mit einer Definition statt dem Ort.
+
+        Bei einem Abschnitt wie „ligeti zentrum“ steht der Ortsfakt häufig
+        zuerst. Für eine Begriffsfrage wäre das korrekt, aber unvollständig.
+        Deshalb bevorzugen wir Fakten mit „ist ein …“ und ergänzen einen
+        unmittelbar folgenden Zweck-Fakt, falls er vorhanden ist.
+        """
+        normalized = self._normalize_search_text(transcript)
+        if not re.search(r"\bwas\s+ist\b", normalized):
+            return ""
+
+        query = self._search_tokens(transcript)
+        if not query or not self.knowledge_dir.is_dir():
+            return ""
+
+        for path in sorted(self.knowledge_dir.glob("*.txt")):
+            if path.name.casefold() == "readme.txt":
+                continue
+            for title, keywords, facts in self._knowledge_sections(path):
+                terms = self._search_tokens(" ".join([title, *keywords]))
+                if not query & terms:
+                    continue
+
+                normalized_title = self._normalize_search_text(title)
+                definition_index = next(
+                    (
+                        index for index, fact in enumerate(facts)
+                        if re.search(
+                            rf"\b{re.escape(normalized_title)}\s+ist\s+(?:ein|eine)\b",
+                            self._normalize_search_text(fact),
+                        )
+                    ),
+                    None,
+                )
+                definition_index = definition_index if definition_index is not None else next(
+                    (
+                        index for index, fact in enumerate(facts)
+                        if re.search(r"\bist\s+(?:ein|eine)\b", fact, re.IGNORECASE)
+                    ),
+                    None,
+                )
+                if definition_index is None:
+                    continue
+
+                answer = facts[definition_index]
+                if definition_index + 1 < len(facts):
+                    next_fact = facts[definition_index + 1]
+                    if re.search(r"\b(möchte|ziel|fördern|vereinen)\b", next_fact, re.IGNORECASE):
+                        answer = f"{answer} {next_fact}"
+                return answer
+
+        return ""
 
     @staticmethod
     def _knowledge_sections(path: Path) -> list[tuple[str, list[str], list[str]]]:
