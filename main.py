@@ -439,6 +439,8 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     # dem Zuhörmodus wechseln, auch während Whisper noch transkribiert.
     osc_interface_controller.thinking()
 
+    waiting_music_process = play_audio_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elfi-denkt.wav"))
+
     print("STT: Transcribing entirely locally ...")
     print(f"{time() - t:.2f} Sec")
     t = time()
@@ -447,6 +449,7 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
 
     if not transcript:
         print("No intelligible text recognized – skipping.")
+        waiting_music_process.kill()
         PLACEHOLDER
         return
 
@@ -457,13 +460,13 @@ def one_cycle(generator: LocalResponseGenerator) -> None:
     print(f"{time() - t:.2f} Sec")
     t_sprache_ende = time()
     t = time()
-    waiting_music_process = play_audio_stoppable(Path("/home/pi/singender-aufzug/waiting_music/elfi-denkt.wav"))
     # --- Elfi-Antwort ---
     result = generator.generate(transcript)
     answer = prepare_llm_answer(result.text)
 
     if not answer:
         print("The language model did not produce a usable answer.")
+        waiting_music_process.kill()
         return
 
     print(f"{time() - t:.2f} Sec")

@@ -136,8 +136,9 @@ def record_audio(
                     )
 
                     threshold = max(
-                        350.0,
-                        noise_level * 3.0,
+                        # Empfindlich genug für ein weiter entferntes Mikrofon.
+                        180.0,
+                        noise_level * 2.0,
                     )
 
                     print(
