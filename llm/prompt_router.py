@@ -1044,7 +1044,7 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
                     + len(query & keyword_tokens) * 3
                     + len(query & fact_tokens)
                 )
-                if score >= 3 and facts:
+                if score >= 2 and facts:
                     matches.append((score, title, fact_text))
 
         if not matches:
