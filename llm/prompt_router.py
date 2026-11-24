@@ -111,6 +111,21 @@ Elfi:"""
         if smalltalk_answer:
             return smalltalk_answer
 
+        if self._contains_any(
+            text,
+            ("stinkt", "gestunken", "geruch", "riecht komisch", "riecht seltsam"),
+        ):
+            return "Oh je. Sag bitte sofort dem Team Bescheid."
+
+        if self._contains_any(
+            text,
+            (
+                "schlechteste", "schlechtestes", "beste", "bestes",
+                "lieblingsangebot", "empfiehlst du", "empfehlung",
+            ),
+        ):
+            return "Ich bewerte die Angebote nicht. Das Team hilft dir gern bei der Auswahl."
+
         program_answer = self._program_direct_response(text)
         if program_answer:
             return program_answer
@@ -289,6 +304,13 @@ Elfi:"""
             ]
             if other_participants:
                 return self._participant_answer(name, other_participants)
+
+        if participants and self._contains_any(
+            text, ("ist da", "auch da", "heute da", "ist heute hier")
+        ):
+            mentioned_person = self._mentioned_participant(text, participants)
+            if mentioned_person:
+                return f"Ja, {mentioned_person} ist bei {name} dabei."
 
         if self._contains_any(
             text,
@@ -573,6 +595,22 @@ Elfi:"""
         ):
             return True
         return "künstler" in text and "heißt" in text
+
+    def _mentioned_participant(
+        self,
+        text: str,
+        participants: list[object],
+    ) -> str:
+        normalized_text = self._normalize_search_text(text)
+        for participant in participants:
+            person = str(participant).strip()
+            normalized_person = self._normalize_search_text(person)
+            first_name = normalized_person.split()[0] if normalized_person else ""
+            if normalized_person and normalized_person in normalized_text:
+                return person
+            if first_name and re.search(rf"(?<!\w){re.escape(first_name)}(?!\w)", normalized_text):
+                return person
+        return ""
 
     def _next_program_response(self, program: list, text: str) -> str | None:
         """Findet den folgenden Act, wenn ein Act ausdrücklich genannt ist."""
@@ -1379,6 +1417,8 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
         normalized_text = self._normalize_search_text(text)
         candidates: list[tuple[str, str]] = []
+        first_name_counts: dict[str, int] = {}
+        participant_rows: list[tuple[str, str]] = []
         for entry in program:
             if not isinstance(entry, dict):
                 continue
@@ -1389,8 +1429,16 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
                 person = str(participant).strip()
                 if person and name:
                     candidates.append((person, name))
+                    participant_rows.append((person, name))
+                    first_name = self._normalize_search_text(person).split()[0]
+                    first_name_counts[first_name] = first_name_counts.get(first_name, 0) + 1
             if str(entry.get("type", "")).casefold() == "science slam" and name:
                 candidates.append(("science slam", name))
+
+        for person, name in participant_rows:
+            first_name = self._normalize_search_text(person).split()[0]
+            if first_name_counts.get(first_name) == 1:
+                candidates.append((first_name, name))
 
         for term, program_name in sorted(
             candidates,

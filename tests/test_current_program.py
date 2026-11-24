@@ -45,6 +45,20 @@ class CurrentProgramTests(unittest.TestCase):
     def test_old_music_night_artist_is_not_active(self) -> None:
         self.assertIsNone(self.router.direct_response("Wann spielt Guan Yanyi?"))
 
+    def test_named_current_participant_is_confirmed(self) -> None:
+        answer = self.router.direct_response("Ist Michel auch da?")
+        self.assertIn("Ja, Michel Blümel", answer)
+        self.assertIn("Erlebnis InnoLab", answer)
+
+    def test_subjective_judgement_is_not_misrouted_to_knowledge(self) -> None:
+        answer = self.router.direct_response("Welches ist das schlechteste Angebot heute?")
+        self.assertIn("bewerte", answer)
+        self.assertNotIn("5. Dezember", answer)
+
+    def test_smell_complaint_goes_to_staff(self) -> None:
+        answer = self.router.direct_response("Hier stinkt es")
+        self.assertIn("Team", answer)
+
 
 if __name__ == "__main__":
     unittest.main()
