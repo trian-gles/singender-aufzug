@@ -1455,12 +1455,18 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
         candidates: list[tuple[str, str]] = []
         first_name_people: dict[str, set[str]] = {}
         participant_rows: list[tuple[str, str]] = []
+        type_programs: dict[str, set[str]] = {}
         for entry in program:
             if not isinstance(entry, dict):
                 continue
             name = str(entry.get("name", "")).strip()
             if name:
                 candidates.append((name, name))
+            normalized_type = self._normalize_search_text(
+                str(entry.get("type", ""))
+            )
+            if normalized_type and name:
+                type_programs.setdefault(normalized_type, set()).add(name)
             for participant in entry.get("participants", []):
                 person = str(participant).strip()
                 if person and name:
@@ -1470,8 +1476,10 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
                     first_name = normalized_person.split()[0] if normalized_person else ""
                     if first_name:
                         first_name_people.setdefault(first_name, set()).add(normalized_person)
-            if str(entry.get("type", "")).casefold() == "science slam" and name:
-                candidates.append(("science slam", name))
+
+        for event_type, program_names in type_programs.items():
+            if len(program_names) == 1:
+                candidates.append((event_type, next(iter(program_names))))
 
         for person, name in participant_rows:
             normalized_person = self._normalize_search_text(person)
