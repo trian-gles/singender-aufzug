@@ -50,6 +50,14 @@ class CurrentProgramTests(unittest.TestCase):
         self.assertIn("Ja, Michel Blümel", answer)
         self.assertIn("Erlebnis InnoLab", answer)
 
+    def test_repeated_program_participant_is_found_by_first_name(self) -> None:
+        answer = self.router.direct_response("Ist Simon da?")
+        self.assertIn("Ja, Simon Linke", answer)
+
+    def test_unknown_attendance_question_does_not_go_to_llm(self) -> None:
+        answer = self.router.direct_response("Ist Andine da?")
+        self.assertEqual(answer, "Das weiß ich nicht sicher. Frag bitte das Team.")
+
     def test_subjective_judgement_is_not_misrouted_to_knowledge(self) -> None:
         answer = self.router.direct_response("Welches ist das schlechteste Angebot heute?")
         self.assertIn("bewerte", answer)

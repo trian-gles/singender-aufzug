@@ -107,6 +107,10 @@ Elfi:"""
 
         text = self._normalize_input(transcript).lower()
 
+        attendance_answer = self._attendance_direct_response(text)
+        if attendance_answer:
+            return attendance_answer
+
         smalltalk_answer = self._smalltalk_direct_response(text)
         if smalltalk_answer:
             return smalltalk_answer
@@ -203,6 +207,38 @@ Elfi:"""
             return None
 
         return None
+
+    def _attendance_direct_response(self, text: str) -> str:
+        """Beantwortet Anwesenheitsfragen nur mit belegten Programmdaten.
+
+        Eine unklare Person darf das Modell nicht zu einer erfundenen Zu- oder
+        Absage verleiten. Bei einem eindeutigen Programmtreffer bestätigen wir
+        die Anwesenheit, sonst verweist Elfi sicher an das Team.
+        """
+
+        if not re.search(r"\bist\s+.+\b(?:auch\s+)?(?:da|hier)\b", text):
+            return ""
+
+        program_name = self._find_artist(text)
+        if not program_name:
+            return "Das weiß ich nicht sicher. Frag bitte das Team."
+
+        program = self._read_assignment(
+            self.config_dir / "program.txt", variable_name="program"
+        )
+        if not isinstance(program, list):
+            return "Das weiß ich nicht sicher. Frag bitte das Team."
+
+        entry = self._find_program_entry(program, program_name)
+        if not entry:
+            return "Das weiß ich nicht sicher. Frag bitte das Team."
+
+        mentioned_person = self._mentioned_participant(
+            text, entry.get("participants", [])
+        )
+        if mentioned_person:
+            return f"Ja, {mentioned_person} ist bei {program_name} dabei."
+        return f"Ja, {program_name} ist heute im Programm."
 
     def _smalltalk_direct_response(self, text: str) -> str | None:
         """Kurze, sichere Smalltalk-Antworten ohne fehleranfälligen Modellaufruf."""
@@ -1417,7 +1453,7 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
         normalized_text = self._normalize_search_text(text)
         candidates: list[tuple[str, str]] = []
-        first_name_counts: dict[str, int] = {}
+        first_name_people: dict[str, set[str]] = {}
         participant_rows: list[tuple[str, str]] = []
         for entry in program:
             if not isinstance(entry, dict):
@@ -1430,14 +1466,17 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
                 if person and name:
                     candidates.append((person, name))
                     participant_rows.append((person, name))
-                    first_name = self._normalize_search_text(person).split()[0]
-                    first_name_counts[first_name] = first_name_counts.get(first_name, 0) + 1
+                    normalized_person = self._normalize_search_text(person)
+                    first_name = normalized_person.split()[0] if normalized_person else ""
+                    if first_name:
+                        first_name_people.setdefault(first_name, set()).add(normalized_person)
             if str(entry.get("type", "")).casefold() == "science slam" and name:
                 candidates.append(("science slam", name))
 
         for person, name in participant_rows:
-            first_name = self._normalize_search_text(person).split()[0]
-            if first_name_counts.get(first_name) == 1:
+            normalized_person = self._normalize_search_text(person)
+            first_name = normalized_person.split()[0] if normalized_person else ""
+            if first_name and len(first_name_people.get(first_name, set())) == 1:
                 candidates.append((first_name, name))
 
         for term, program_name in sorted(
