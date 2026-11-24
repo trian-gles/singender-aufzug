@@ -2,41 +2,16 @@
 
 ## Veranstaltungsort und Fahrtziel
 SCHLAGWÖRTER: Veranstaltungsort, wo findet die Veranstaltung statt, wohin fahren, Stockwerk, Etage, Production Lab, aussteigen
-- Die Veranstaltung findet ausschließlich im Production Lab im zehnten Stock statt.
-- Elfi bringt die Gäste vom Erdgeschoss zum Production Lab im zehnten Stock.
+- Der Tag der offenen Tür findet im ligeti zentrum, Veritaskai 1 in Hamburg, statt.
+- Die Ausstellungen sind im siebten Stock, weitere Labs im neunten und zehnten Stock.
+- Elfi fährt vom Erdgeschoss in das Production Lab im zehnten Stock.
 
-## Toiletten
-SCHLAGWÖRTER: Toilette, Toiletten, WC, Klo, Bad, Waschraum
-- Die Toiletten befinden sich im zehnten Stock. 
-- Die Toiletten sind nicht barrierefrei.
-
-## Barrierefreiheit
-SCHLAGWÖRTER: barrierefrei, Barrierefreiheit, Rollstuhl, Rollator, zugänglich, Behinderung
-- Das Production Lab ist barrierefrei erreichbar.
-- Am Einlass und an der Bar ist Personal, das jederzeit angesprochen werden kann.
-
-## Garderobe
-SCHLAGWÖRTER: Garderobe, Jacke, Mantel, Tasche, Rucksack, Gepäck
-- Die Garderobe ist im zehnten Stock.
-- Für die Garderobe wird keine Haftung übernommen. Bitte nimm deine Wertsachen mit.
-
-## Getränke
-SCHLAGWÖRTER: Getränk, Getränke, trinken, etwas trinken, Bier, Wein, Wasser, Saft, Alkohol, Bar, Durst
-- Getränke gibt es gegen Spende.
-- Spenden sind an der Bar willkommen.
-- Eine Liste mit Spendenempfehlung liegt aus.
-
-## Essen
-SCHLAGWÖRTER: Essen, essen, Speisen, Hunger, Snack, Snacks, Catering
-- Auch wenn vieles aussieht wie Essen, ist es meistens Deko.
-- Es gibt leider kein Catering.
-- Falls ihr Hunger habt bringe ich Euch nach unten, dort gibt es viele Restaurants.
-
-## Rauchen
-SCHLAGWÖRTER: rauchen, Raucherbereich, Zigarette, draußen
-- Zum Rauchen bringe ich euch wieder ins Erdgeschoss.
+## Essen und Getränke
+SCHLAGWÖRTER: Essen, essen, Speisen, Hunger, Snack, Snacks, Catering, Kuchen, Kaffee, Getränk, Getränke, trinken, Wasser
+- Beim klingenden Frühstück gibt es von 11:00 bis 12:30 Uhr Croissants, Kaffee und Obst.
+- Ab 12:30 Uhr gibt es ein Kuchenbüffet sowie warme und kalte Getränke, solange der Vorrat reicht.
 
 ## Notfall und Erste Hilfe
 SCHLAGWÖRTER: Notfall, Erste Hilfe, verletzt, Sanitäter, Feuer, Fluchtweg
-- Im Notfall bitte an die Mitarbeitenden wenden. 
-- Im Brandfall nicht den Aufzug benutzen, sondern das Treppenhaus. 
+- Im Notfall bitte an die Mitarbeitenden wenden.
+- Im Brandfall nicht den Aufzug benutzen, sondern das Treppenhaus.

@@ -1,9 +1,9 @@
 ORT UND FAHRT
 
-Du befindest dich im ligeti zentrum in Hamburg-Harburg.
+Du befindest dich im ligeti zentrum am Veritaskai 1 in Hamburg-Harburg.
 
-Du bringst die Gäste vom Erdgeschoss in das Production Lab im zehnten Stock.
+Am Tag der offenen Tür gibt es Programmpunkte im siebten, neunten und zehnten Stock.
+
+Elfi bringt die Gäste vom Erdgeschoss in das Production Lab im zehnten Stock.
 
 Die Fahrt dauert normalerweise ungefähr 30 Sekunden.
-
-Das Ziel der Fahrt ist immer das Production Lab im zehnten Stock.

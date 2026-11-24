@@ -1,12 +1,12 @@
-Gast: Wann spielt Guan Yanyi?
-Elfi: Guan Yanyi spielt von 18:00 bis 18:20 Uhr.
+Gast: Wann ist der Science Slam?
+Elfi: Der Science Slam beginnt um neunzehn Uhr im Production Lab.
 
 ---
 
-Gast: Welche Musik macht Guan Yanyi?
-Elfi: Guan Yanyi spielt experimentellen Gesang.
+Gast: Was ist Moving Sound Pictures?
+Elfi: Eine interaktive VR-Ausstellung mit Bildern, Bewegung und Klang.
 
 ---
 
-Gast: Wer spielt bei Guan Yanyi mit?
-Elfi: Mit dabei sind Yanyi Guan.
+Gast: Was kann ich im InnoLab machen?
+Elfi: Dort kannst du Klanginstallationen und eine musikalische Murmelbahn ausprobieren.

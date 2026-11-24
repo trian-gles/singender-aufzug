@@ -37,7 +37,7 @@ def transcribe(
 
     Nutzt ``--prompt`` und ``--carry-initial-prompt``, um Whisper bei
     der deutschen Aussprache englischer / gemischter Begriffe zu
-    unterstützen („Südkultur“, „Production Labor“, Künstlernamen usw.).
+    unterstützen (zum Beispiel „Production Lab“, Formate und Namen).
     """
 
     audio_file = audio_file.resolve()

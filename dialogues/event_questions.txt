@@ -1,12 +1,12 @@
 Gast: Was passiert heute?
-Elfi: Heute findet die Südkultur Music-Night statt.
-
----
-
-Gast: Was ist die Südkultur Music-Night?
-Elfi: Sie findet einmal im Jahr in Harburg statt. Mit einem Ticket kannst du alle teilnehmenden Spielstätten besuchen.
+Elfi: Heute ist Tag der offenen Tür: Entdecke Labs, Ausstellungen und Mitmachformate.
 
 ---
 
 Gast: Wann geht es los?
-Elfi: Das Programm im ligeti zentrum beginnt um siebzehn Uhr fünfzehn.
+Elfi: Die Labs öffnen um elf Uhr.
+
+---
+
+Gast: Was passiert heute Abend?
+Elfi: Um neunzehn Uhr beginnt der Science Slam strg plus alt ligeti im Production Lab.

@@ -1,0 +1,58 @@
+# ANKÜNDIGUNGSTEXTE UND HINTERGRÜNDE
+# Die Kurzfakten und Uhrzeiten stehen in config/program.txt.
+
+## Interaktive Installationen und Ausstellung von Dai Jianhua
+SCHLAGWÖRTER: interaktive Installationen, Ausstellung, Dai Jianhua, Ölmalerei, Kunst
+- Ab 17:00 Uhr gibt es interaktive Installationen und eine Ausstellung von Dai Jianhua.
+- Dai Jianhua ist ein in Shanghai lebender chinesischer Künstler, der sich auf Ölmalerei spezialisiert hat.
+- Seine Werke wurden international ausgestellt, unter anderem in Paris und bei der Louvre Independent Artists Exhibition.
+- Zu seinem künstlerischen Schaffen sind mehrere Monografien und Beiträge in Publikationen zur zeitgenössischen chinesischen Kunst erschienen.
+
+## Sonomathematische Impulsarchitekten
+SCHLAGWÖRTER: Sonomathematische Impulsarchitekten, Impulsarchitekten, Simon Linke, Rolf Bader, IPF, Impulse Pattern Formulation, Algorithmus
+- Simon Linke und Rolf Bader musizieren mit der Impulse Pattern Formulation, kurz IPF.
+- IPF ist ein physikalischer Modellierungsalgorithmus zur Erzeugung von Klängen, Rhythmen und großräumigen Formen.
+- Der Algorithmus übernimmt die Rolle eines virtuellen Mitmusikers und reagiert eigenwillig auf die Impulse der Musiker.
+- Simon Linke spielt Zither und Keyboard und nutzt elektronische Klangerzeugung.
+- Rolf Bader spielt Midi-Gitarre und nutzt elektronische Klangerzeugung.
+
+## Guan Yanyi
+SCHLAGWÖRTER: Guan Yanyi, chinesische Gedichte, Mundharmonika, Synthesizer, Buddhismus, Zenbuddhismus
+- Guan Yanyi vertont in ihrem Liederzyklus Texte aus alten chinesischen Gedichten.
+- Traditionelle Melodien treffen auf Gitarre, Mundharmonika und Synthesizer.
+- Guan Yanyi verbindet buddhistische und zenbuddhistische Musiktraditionen mit zeitgenössischer Multimedia-Kunst.
+- Sie hat für Museumsausstellungen und Projekte zum kulturellen Erbe komponiert.
+- Guan Yanyi singt und spielt Gitarre, Mundharmonika und Synthesizer.
+
+## Liang Yiyuan
+SCHLAGWÖRTER: Liang Yiyuan, Yangqin, Suona, chinesische Instrumente, Klangobjekte, Ambient
+- Liang Yiyuan spielt modifizierte traditionelle chinesische Instrumente, darunter Yangqin und Suona.
+- Er kombiniert die Instrumente mit Gitarre und selbstgebauten Klangobjekten zu einer experimentellen Klangsprache.
+- Seine Arbeit verbindet Bildende Kunst, Ambient, elektronische und improvisierte Musik.
+- Er hat multimedial für zeitgenössische Kunst, Tanz und Film gearbeitet.
+
+## Potluck
+SCHLAGWÖRTER: Potluck, Jam-Session, Jam Session, gemeinsames Abendessen
+- Potluck ist der englische Begriff für ein gemeinsames Abendessen, zu dem jeder Gast eine Speise beisteuert.
+- Beim musikalischen Potluck treffen statt Speisen verschiedene Stile, Einflüsse, Instrumente und Gerätschaften aufeinander.
+- [OFFEN: Ist die Jam-Session für die aktive Teilnahme von Gästen geöffnet?]
+
+## oscheat
+SCHLAGWÖRTER: oscheat, Moritz Wesp, Eric Haupt, Victor Gelling, Simon Linke, OSC, Open Sound Control, Interface
+- Bei oscheat können Musiker mit einem eigens entwickelten Interface auch die Instrumente der anderen steuern.
+- Das Interface basiert auf Open Sound Control, einem Protokoll zur Echtzeit-Kommunikation zwischen Musikinstrumenten und digitalen Geräten.
+- Das System besteht aus Synthesizern für Melodik und Harmonik, Sequencern für Rhythmik und Samplern für Sprache.
+- Moritz Wesp spielt virtuelle Posaune und Keytar, Eric Haupt Midi-Gitarre, Victor Gelling Modular-Synthesizer und Simon Linke Zither.
+
+## Clarks Planet
+SCHLAGWÖRTER: Clarks Planet, Kieran McAuliffe, Kollektiv Visuell, Avantgarde Pop, Visuals, E-Gitarre
+- Clarks Planet verbindet Avantgarde-Pop mit Gesang, E-Gitarre, Drums und Performance.
+- Die Texte handeln unter anderem von Verletzlichkeit, Verbindung und dem Aufbrechen patriarchaler Strukturen.
+- Kieran McAuliffe gestaltet räumliche Audioeffekte und Kollektiv Visuell die Visuals.
+
+## Kieran McAuliffe und Friends
+SCHLAGWÖRTER: Kieran McAuliffe, Friends, Irish Folk, Jazz, irische Folkmusik, Heimat
+- Kieran McAuliffes neues Programm verbindet irische Folkmusik mit der Experimentierlust des Jazz.
+- Beide Musiktraditionen werden durch die Sehnsucht nach Heimat verbunden.
+- Er wird von alten und neuen Ensemblemitgliedern sowie Teammitgliedern des ligeti zentrums begleitet.
+- [OFFEN: Namen und Instrumente der weiteren Mitwirkenden.]

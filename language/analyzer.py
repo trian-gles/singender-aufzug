@@ -5,19 +5,9 @@ import pyphen
 
 
 PRONUNCIATION_SYLLABLES = {
-    "sonomathematische": ["So", "no", "ma", "the", "ma", "ti", "sche"],
-    "impulsarchitekten": ["Im", "pul", "sa", "chi", "tek", "ten"],
     "production": ["Pro", "duc", "tion"],
-    "music": ["Mu", "sic"],
-    "music-night": ["Mu", "sic", "Night"],
-    "irish": ["I", "rish"],
     "session": ["Ses", "sion"],
-    "jam-session": ["Jam", "Ses", "sion"],
-    "noise": ["Noise"],
-    "improvisation": ["Im", "pro", "vi", "sa", "tion"],
-    "conceptual": ["Con", "cep", "tu", "al"],
     "interface": ["In", "ter", "face"],
-    "friends": ["Friends"],
 }
 
 

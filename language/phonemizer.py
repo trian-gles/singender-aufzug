@@ -9,22 +9,8 @@ ENGLISH_TERMS = frozenset(
     {
         "production",
         "lab",
-        "music",
-        "night",
-        "music-night",
-        "irish",
-        "folk",
-        "jam",
         "session",
-        "jam-session",
-        "free",
-        "noise",
-        "improvisation",
-        "conceptual",
         "interface",
-        "clarks",
-        "planet",
-        "friends",
         "drums",
     }
 )

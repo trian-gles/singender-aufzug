@@ -339,7 +339,7 @@ class LocalResponseGenerator:
                 "welche veranstaltung",
             )
         ):
-            return "Heute findet die Südkultur Music-Night statt."
+            return "Heute ist Tag der offenen Tür im ligeti zentrum."
 
         if any(
             phrase in text

@@ -1,23 +1,19 @@
 event = {
-    "name": "Südkultur Music-Night",
-    "start": "17:00 Uhr",
-    "concert_start": "17:15 Uhr",
-    "price": "7,50 €",
-    "location": "ligeti zentrum",
-    "room": "Production Lab",
-    "floor": "zehnten Stock",
-    "genres": [
-        "Improvisation",
-        "Avantgarde-Pop",
-        "Jazz",
-        "Irish Folk",
-        "Elektronik",
-    ],
-    "special": "Jam-Session",
-    "subtitle": "Klang à la Carte!",
+    "name": "Tag der offenen Tür",
+    "date": "5. Dezember 2026",
+    "start": "11:00 Uhr",
+    "end": "18:00 Uhr",
+    "location": "ligeti zentrum, Veritaskai 1, 21079 Hamburg",
+    "rooms": ["Exhibition Floor im 7. Stock", "Labs im 9. Stock", "Labs im 10. Stock"],
+    "subtitle": "Disziplinen im Dialog",
     "description": (
-        "Ein musikalisches Dinner mit mathematischen Klanglandschaften, "
-        "vertonten chinesischen Gedichten, elektronischer Klangforschung, "
-        "Avantgarde-Pop, Jazz, Irish Folk und einer Jam-Session."
+        "Ein Tag zum Entdecken, Ausprobieren und Mitmachen: Das ligeti zentrum "
+        "öffnet seine Labs für interaktive Ausstellungen, Demos, Workshops, "
+        "Führungen und Gespräche."
     ),
+    "highlights": [
+        "interaktive Ausstellungen auf dem Exhibition Floor",
+        "offene Labs im 9. und 10. Stock",
+        "Science Slam strg+alt+ligeti von 19:00 bis 21:00 Uhr",
+    ],
 }

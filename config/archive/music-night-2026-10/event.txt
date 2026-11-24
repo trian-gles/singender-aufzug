@@ -1,0 +1,23 @@
+event = {
+    "name": "Südkultur Music-Night",
+    "start": "17:00 Uhr",
+    "concert_start": "17:15 Uhr",
+    "price": "7,50 €",
+    "location": "ligeti zentrum",
+    "room": "Production Lab",
+    "floor": "zehnten Stock",
+    "genres": [
+        "Improvisation",
+        "Avantgarde-Pop",
+        "Jazz",
+        "Irish Folk",
+        "Elektronik",
+    ],
+    "special": "Jam-Session",
+    "subtitle": "Klang à la Carte!",
+    "description": (
+        "Ein musikalisches Dinner mit mathematischen Klanglandschaften, "
+        "vertonten chinesischen Gedichten, elektronischer Klangforschung, "
+        "Avantgarde-Pop, Jazz, Irish Folk und einer Jam-Session."
+    ),
+}

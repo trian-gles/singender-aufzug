@@ -41,30 +41,6 @@ class PromptRouter:
     die für die aktuelle Frage relevant sind.
     """
 
-    ARTISTS = {
-        "sonomathematische impulsarchitekten": (
-            "sonomathematische impulsarchitekten"
-        ),
-        "impulsarchitekten": "sonomathematische impulsarchitekten",
-        "simon linke": "sonomathematische impulsarchitekten",
-        "simon": "sonomathematische impulsarchitekten",
-        "rolf bader": "sonomathematische impulsarchitekten",
-        "rolf": "sonomathematische impulsarchitekten",
-        "bader": "sonomathematische impulsarchitekten",
-        "guan yanyi": "guan yanyi",
-        "guan": "guan yanyi",
-        "dai jianhua": "interaktive installationen und ausstellung von dai jianhua",
-        "dai": "interaktive installationen und ausstellung von dai jianhua",
-        "liang yiyuan": "liang yiyuan",
-        "liang": "liang yiyuan",
-        "potluck": "potluck",
-        "oscheat": "oscheat",
-        "clarks planet": "clarks planet",
-        "clark": "clarks planet",
-        "kieran mcauliffe": "kieran mcauliffe",
-        "kieran": "kieran mcauliffe",
-    }
-
     def __init__(
         self,
         config_dir: Path = CONFIG_DIR,
@@ -383,10 +359,7 @@ Elfi:"""
             if acts:
                 if len(acts) == 1:
                     return f"Zither hörst du bei {acts[0]}."
-                return (
-                    "Zither hörst du bei den Sonomathematischen "
-                    "Impulsarchitekten und bei oscheat."
-                )
+                return f"Zither hörst du bei {', '.join(acts[:-1])} und {acts[-1]}."
 
         if self._contains_any(
             text,
@@ -456,6 +429,7 @@ Elfi:"""
             return int(time_match.group(1)) * 60 + int(time_match.group(2))
 
         scheduled_entries: list[tuple[int, int | None, str]] = []
+        active_entries: list[str] = []
         for entry in program:
             if not isinstance(entry, dict):
                 continue
@@ -468,7 +442,16 @@ Elfi:"""
             if (end is None and requested_minutes == start) or (
                 end is not None and start <= requested_minutes < end
             ):
-                return f"Um {match.group(1)}:{match.group(2) or '00'} Uhr spielt {name}."
+                active_entries.append(name)
+
+        requested_time = f"{match.group(1)}:{match.group(2) or '00'}"
+        if active_entries:
+            if len(active_entries) == 1:
+                return f"Um {requested_time} Uhr findet {active_entries[0]} statt."
+            shown_entries = active_entries[:3]
+            names = ", ".join(shown_entries[:-1])
+            names += f" und {shown_entries[-1]}"
+            return f"Um {requested_time} Uhr laufen {names}."
 
         previous = max(
             (
@@ -488,7 +471,7 @@ Elfi:"""
         )
         if previous and following:
             return (
-                f"Um {match.group(1)}:{match.group(2) or '00'} Uhr ist gerade "
+                f"Um {requested_time} Uhr ist gerade "
                 f"eine kurze Pause. Danach spielt {following[2]} um "
                 f"{following[0] // 60:02d}:{following[0] % 60:02d} Uhr."
             )
@@ -535,9 +518,9 @@ Elfi:"""
             return self._choose_variant(
                 f"time:{name}",
                 [
-                    f"Der Auftritt von {name} geht von {start} bis {end} Uhr.",
-                    f"Von {start} bis {end} Uhr ist {name} zu hören.",
-                    f"Um {start} Uhr beginnt der Auftritt von {name}.",
+                    f"Der Programmpunkt {name} geht von {start} bis {end} Uhr.",
+                    f"Von {start} bis {end} Uhr findet {name} statt.",
+                    f"Um {start} Uhr beginnt {name}.",
                 ],
             )
 
@@ -545,7 +528,7 @@ Elfi:"""
             f"time:{name}",
             [
                 f"{name} beginnt um {start} Uhr.",
-                f"Um {start} Uhr ist {name} zu hören.",
+                f"Um {start} Uhr findet {name} statt.",
             ],
         )
 
@@ -675,10 +658,9 @@ Elfi:"""
         if not isinstance(event_data, dict):
             return None
 
-        name = event_data.get("name", "Südkultur Music-Night")
+        name = event_data.get("name", "Tag der offenen Tür")
         start = event_data.get("start")
         price = event_data.get("price")
-        genres = event_data.get("genres", [])
         location = event_data.get("location")
         room = event_data.get("room")
         floor = event_data.get("floor")
@@ -723,11 +705,6 @@ Elfi:"""
                 return f"Die Veranstaltung findet im {room} im {floor} statt."
             if location:
                 return f"Die Veranstaltung findet im {location} statt."
-        if self._contains_any(text, ("musik", "genre", "musikrichtung")) and genres:
-            return (
-                "Heute reicht das musikalische Menü von Improvisation und "
-                "Avantgarde-Pop bis zu Jazz, Irish Folk und elektronischer Klangforschung."
-            )
         if self._contains_any(
             text,
             ("was passiert hier", "was ist denn los", "was ist los", "was passiert heute", "was ist heute", "warum bin ich heute hier"),
@@ -736,12 +713,12 @@ Elfi:"""
             return self._choose_variant(
                 "event:overview",
                 [
-                    f"Heute erwartet dich {title}: ein musikalisches Dinner von experimenteller Improvisation bis Irish Folk.",
-                    "Hier gibt es heute Konzerte, interaktive Installationen und eine gemeinsame Jam-Session.",
-                    f"Heute steigt die {name} mit vielfältiger Musik, Kunst und einer Jam-Session.",
+                    f"Heute erwartet dich {title}: offene Labs, Ausstellungen und Mitmachformate.",
+                    "Hier gibt es heute interaktive Ausstellungen, Demos, Workshops und Führungen.",
+                    f"Heute ist {name} mit vielen Einblicken in Kunst, Forschung und Technologie.",
                 ],
             )
-        if self._contains_any(text, ("veranstaltung", "music night", "music-night", "südkultur", "suedkultur", "programm", "konzert", "jam session")):
+        if self._contains_any(text, ("veranstaltung", "tag der offenen tür", "tag der offenen tuer", "open house", "programm", "science slam")):
             return f"Heute findet die {name} statt."
 
         return None
@@ -782,7 +759,7 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
         Sie erlauben keine frei erfundenen Details.
         """
 
-        names = list(dict.fromkeys(self.ARTISTS.values()))
+        names: list[str] = []
         program_entries: list[dict] = []
         program = self._read_assignment(
             self.config_dir / "program.txt",
@@ -850,7 +827,7 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             return ""
 
         query = " ".join(query_tokens)
-        candidates = list(dict.fromkeys([*self.ARTISTS.keys(), *names]))
+        candidates = list(dict.fromkeys(names))
         scored = [
             (SequenceMatcher(None, query, self._normalize_search_text(name)).ratio(), name)
             for name in candidates
@@ -866,7 +843,7 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 if name.casefold() == candidate.casefold()
                 and name != name.casefold()
             ),
-            self.ARTISTS.get(candidate, candidate),
+            candidate,
         )
         return canonical
 
@@ -911,10 +888,10 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 "warum bin ich heute hier",
                 "was ist heute",
                 "veranstaltung",
-                "music night",
-                "music-night",
-                "südkultur",
-                "suedkultur",
+                "tag der offenen tür",
+                "tag der offenen tuer",
+                "open house",
+                "disziplinen im dialog",
                 "eintritt",
                 "ticket",
                 "programm",
@@ -929,8 +906,8 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 "welche künstlerin",
                 "wer spielt heute",
                 "wer tritt auf",
-                "konzert",
-                "jam session",
+                "science slam",
+                "strg alt ligeti",
             ),
         ):
             return "event"
@@ -1193,16 +1170,15 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
 
         if not isinstance(event_data, dict):
             return (
-                "Heute findet die Südkultur Music-Night statt. "
-                "Das Programm beginnt um 17:15 Uhr."
+                "Heute ist Tag der offenen Tür im ligeti zentrum. "
+                "Die Labs öffnen um 11:00 Uhr."
             )
 
-        name = event_data.get("name", "Südkultur Music-Night")
+        name = event_data.get("name", "Tag der offenen Tür")
         start = event_data.get("start")
         price = event_data.get("price")
         location = event_data.get("location")
-        genres = event_data.get("genres", [])
-        special = event_data.get("special")
+        highlights = event_data.get("highlights", [])
 
         text = transcript.lower()
 
@@ -1250,20 +1226,8 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
                     return "HEUTIGES PROGRAMM\n" + "\n".join(acts)
 
         details = [f"Heute findet die {name} statt."]
-        if genres:
-            genre_text = ", ".join(genres[:-1])
-            if len(genres) > 1:
-                genre_text += f" und {genres[-1]}"
-            else:
-                genre_text = genres[0]
-            details.append(
-                f"Das Programm umfasst {genre_text}."
-            )
-
-        if special:
-            details.append(
-                f"Außerdem gibt es eine {special}."
-            )
+        if highlights:
+            details.append("Highlights sind " + ", ".join(highlights) + ".")
         return "\n".join(details)
 
     def _artist_context(self, transcript: str) -> str:
@@ -1406,9 +1370,38 @@ Das Ziel der Fahrt ist das Production Lab im zehnten Stock."""
    
 
     def _find_artist(self, text: str) -> str | None:
-        for keyword, artist in self.ARTISTS.items():
-            if keyword in text:
-                return artist
+        program = self._read_assignment(
+            self.config_dir / "program.txt",
+            variable_name="program",
+        )
+        if not isinstance(program, list):
+            return None
+
+        normalized_text = self._normalize_search_text(text)
+        candidates: list[tuple[str, str]] = []
+        for entry in program:
+            if not isinstance(entry, dict):
+                continue
+            name = str(entry.get("name", "")).strip()
+            if name:
+                candidates.append((name, name))
+            for participant in entry.get("participants", []):
+                person = str(participant).strip()
+                if person and name:
+                    candidates.append((person, name))
+            if str(entry.get("type", "")).casefold() == "science slam" and name:
+                candidates.append(("science slam", name))
+
+        for term, program_name in sorted(
+            candidates,
+            key=lambda item: len(self._normalize_search_text(item[0])),
+            reverse=True,
+        ):
+            normalized_term = self._normalize_search_text(term)
+            if normalized_term and re.search(
+                rf"(?<!\w){re.escape(normalized_term)}(?!\w)", normalized_text
+            ):
+                return program_name
 
         return None
 
