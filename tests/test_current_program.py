@@ -113,6 +113,11 @@ class CurrentProgramTests(unittest.TestCase):
         answer = self.router.direct_response("Hier stinkt es")
         self.assertIn("Team", answer)
 
+    def test_recommendation_question_is_not_answered_with_event_name(self) -> None:
+        answer = self.router.direct_response("Welcher Programmpunkt ist empfehlenswert?")
+        self.assertIn("bewerte", answer)
+        self.assertNotIn("Tag der offenen Tür", answer)
+
 
 if __name__ == "__main__":
     unittest.main()

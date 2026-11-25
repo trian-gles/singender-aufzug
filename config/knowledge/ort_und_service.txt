@@ -11,6 +11,11 @@ SCHLAGWÖRTER: Essen, essen, Speisen, Hunger, Snack, Snacks, Catering, Kuchen, K
 - Beim klingenden Frühstück gibt es von 11:00 bis 12:30 Uhr Croissants, Kaffee und Obst.
 - Ab 12:30 Uhr gibt es ein Kuchenbüffet sowie warme und kalte Getränke, solange der Vorrat reicht.
 
+## Toiletten
+SCHLAGWÖRTER: Toilette, Toiletten, WC, Klo, Bad, Waschraum
+- Toiletten befinden sich auf jedem Stockwerk.
+- Die Toiletten sind nicht barrierefrei.
+
 ## Notfall und Erste Hilfe
 SCHLAGWÖRTER: Notfall, Erste Hilfe, verletzt, Sanitäter, Feuer, Fluchtweg
 - Im Notfall bitte an die Mitarbeitenden wenden.

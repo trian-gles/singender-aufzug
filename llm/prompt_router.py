@@ -127,9 +127,17 @@ Elfi:"""
                 "schlechteste", "schlechtestes", "beste", "bestes",
                 "lieblingsangebot", "lieblingsprogrammpunkt", "lieblingsprogramm",
                 "dein lieblings", "deine lieblings", "empfiehlst du", "empfehlung",
+                "empfehlenswert", "was lohnt sich", "was soll ich besuchen",
             ),
         ):
             return "Ich bewerte die Angebote nicht. Das Team hilft dir gern bei der Auswahl."
+
+        if self._contains_any(
+            text,
+            ("hunger", "hungrig", "kuchen", "klo", "toilette", "wc"),
+        ):
+            answer = self._knowledge_direct_response(text)
+            return answer or None
 
         program_answer = self._program_direct_response(text)
         if program_answer:
@@ -1219,17 +1227,17 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
         kann eine ``SCHLAGWÖRTER:``-Zeile und beliebig viele Fakten enthalten.
         Platzhalter mit ``[OFFEN:`` gelten nie als Wissen.
         """
-        query = self._search_tokens(transcript)
+        query = self._knowledge_query_tokens(transcript)
         if not query or not self.knowledge_dir.is_dir():
             return ""
 
-        matches: list[tuple[int, str, str]] = []
+        matches: list[tuple[int, str, str, list[str]]] = []
         for path in sorted(self.knowledge_dir.glob("*.txt")):
             if path.name.casefold() == "readme.txt":
                 continue
             for title, keywords, facts in self._knowledge_sections(path):
                 keyword_text = " ".join(keywords)
-                keyword_tokens = self._search_tokens(keyword_text)
+                keyword_tokens = self._knowledge_query_tokens(keyword_text)
                 fact_text = " ".join(facts)
                 fact_tokens = self._search_tokens(f"{title} {fact_text}")
 
@@ -1243,8 +1251,8 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
                     + len(query & keyword_tokens) * 3
                     + len(query & fact_tokens)
                 )
-                if score >= 2 and facts:
-                    matches.append((score, title, fact_text))
+                if len(query & keyword_tokens) >= 1 and facts:
+                    matches.append((score, title, fact_text, keywords))
 
         if not matches:
             return ""
@@ -1252,7 +1260,7 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
         matches.sort(key=lambda item: (-item[0], item[1].casefold()))
         selected = matches[:2]
         return "\n".join(
-            f"{title}: {facts}" for _, title, facts in selected
+            f"{title}: {facts}" for _, title, facts, _ in selected
         )[:1200]
 
     def _knowledge_direct_response(self, transcript: str) -> str:
@@ -1261,17 +1269,41 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
         if definition:
             return definition
 
-        context = self._knowledge_context(transcript)
-        if not context:
+        query = self._knowledge_query_tokens(transcript)
+        scored_sentences: list[tuple[int, str]] = []
+        for path in sorted(self.knowledge_dir.glob("*.txt")):
+            if path.name.casefold() == "readme.txt":
+                continue
+            for title, keywords, facts in self._knowledge_sections(path):
+                section_overlap = len(
+                    query & self._knowledge_query_tokens(" ".join([title, *keywords]))
+                )
+                if not section_overlap or not facts:
+                    continue
+                for sentence in facts:
+                    overlap = len(query & self._knowledge_query_tokens(sentence))
+                    scored_sentences.append((section_overlap * 2 + overlap, sentence))
+        if not scored_sentences:
             return ""
-        first_match = context.splitlines()[0]
-        answer = first_match.split(": ", 1)[-1].strip()
-        sentences = re.split(r"(?<=[.!?])\s+", answer)
-        query = self._search_tokens(transcript)
-        return max(
-            sentences,
-            key=lambda sentence: len(query & self._search_tokens(sentence)),
-        ).strip()
+        scored_sentences.sort(key=lambda item: -item[0])
+        return scored_sentences[0][1]
+
+    @classmethod
+    def _knowledge_query_tokens(cls, text: str) -> set[str]:
+        """Normalisiert einfache deutsche Flexionen für Schlagworttreffer."""
+        tokens = cls._search_tokens(text)
+        normalized: set[str] = set()
+        for token in tokens:
+            normalized.add(token)
+            if len(token) > 4 and token.endswith("en"):
+                normalized.add(token[:-2])
+            if len(token) > 3 and token.endswith("n"):
+                normalized.add(token[:-1])
+            if len(token) > 3 and token.endswith("e"):
+                normalized.add(token[:-1])
+            if len(token) > 3 and token.endswith("s"):
+                normalized.add(token[:-1])
+        return normalized
 
     def _knowledge_definition_response(self, transcript: str) -> str:
         """Beantwortet „Was ist …?“-Fragen mit einer Definition statt dem Ort.

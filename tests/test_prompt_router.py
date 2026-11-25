@@ -88,6 +88,25 @@ class PromptRouterKnowledgeTests(unittest.TestCase):
             self.router().direct_response("Gibt es hier Schließfächer?")
         )
 
+    def test_generic_where_question_does_not_pick_first_unrelated_fact(self) -> None:
+        knowledge = self.knowledge_dir / "service.txt"
+        knowledge.write_text(
+            "## Toiletten\n"
+            "SCHLAGWÖRTER: Toilette, Toiletten, WC, Klo\n"
+            "- Die Toiletten befinden sich im zehnten Stock.\n",
+            encoding="utf-8",
+        )
+        answer = self.router().direct_response("Wo finde ich ein Klo?")
+        self.assertEqual(answer, "Die Toiletten befinden sich im zehnten Stock.")
+
+    def test_loose_keyword_overlap_is_not_a_direct_answer(self) -> None:
+        (self.knowledge_dir / "event.txt").write_text(
+            "## Orte\nSCHLAGWÖRTER: Stock, Lab, wo\n"
+            "- Der Exhibition Floor befindet sich im siebten Stock.\n",
+            encoding="utf-8",
+        )
+        self.assertIsNone(self.router().direct_response("Wo finde ich ein Klo?"))
+
     def test_asr_context_exposes_canonical_artist_names(self) -> None:
         (self.config_dir / "program.txt").write_text(
             "program = [{'name': 'Guan Yanyi', 'start': '18:00', "
