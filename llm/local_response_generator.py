@@ -211,7 +211,7 @@ class LocalResponseGenerator:
 
         payload = {
             "messages": [{"role": "user", "content": prompt}],
-            "n_predict": 24,
+            "n_predict": 40,
             # Etwas Spielraum hilft bei kleinen ASR-Fehlern, während der
             # Prompt weiterhin nur belegte Fakten als Antwort zulässt.
             "temperature": 0.25,

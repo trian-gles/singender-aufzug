@@ -125,7 +125,8 @@ Elfi:"""
             text,
             (
                 "schlechteste", "schlechtestes", "beste", "bestes",
-                "lieblingsangebot", "empfiehlst du", "empfehlung",
+                "lieblingsangebot", "lieblingsprogrammpunkt", "lieblingsprogramm",
+                "dein lieblings", "deine lieblings", "empfiehlst du", "empfehlung",
             ),
         ):
             return "Ich bewerte die Angebote nicht. Das Team hilft dir gern bei der Auswahl."
@@ -167,6 +168,9 @@ Elfi:"""
                     "welchen stock",
                     "in welchem stock",
                     "production lab",
+                    "haptic lab",
+                    "innolab",
+                    "xr lab",
                     "wo aussteigen",
                 ),
             ):
@@ -312,6 +316,13 @@ Elfi:"""
         if not isinstance(program, list):
             return None
 
+        room_entry = self._program_entry_for_room(program, text)
+        if room_entry:
+            return self._program_room_overview(room_entry, text)
+
+        if self._contains_any(text, ("was erwartet mich", "was erwartet uns")):
+            return None
+
         next_response = self._next_program_response(program, text)
         if next_response:
             return next_response
@@ -395,6 +406,40 @@ Elfi:"""
         # Die Nennung eines Acts ohne weitere Frage ist eine Einladung zu
         # einer kurzen, gesicherten Einführung.
         return self._short_program_description(name, genre, description, start)
+
+    def _program_entry_for_room(self, program: list, text: str) -> dict | None:
+        normalized = self._normalize_search_text(text)
+        for entry in program:
+            if not isinstance(entry, dict):
+                continue
+            room = self._normalize_search_text(str(entry.get("room", "")))
+            if room and re.search(rf"(?<!\w){re.escape(room)}(?!\w)", normalized):
+                return entry
+        return None
+
+    def _program_room_overview(self, entry: dict, text: str) -> str:
+        """Gibt Raumfragen anhand der im Programm gepflegten Ortsdaten aus."""
+        room = str(entry.get("room", "")).strip()
+        floor = str(entry.get("floor", "")).strip()
+        items = [
+            candidate for candidate in self._read_assignment(
+                self.config_dir / "program.txt", variable_name="program"
+            )
+            if isinstance(candidate, dict)
+            and candidate.get("room") == entry.get("room")
+        ]
+        if self._contains_any(text, ("wo", "welchem stock", "welcher stock", "stockwerk")):
+            if room and floor:
+                return f"{room} ist im {floor}."
+            if floor:
+                return f"Der Raum ist im {floor}."
+        names = list(dict.fromkeys(str(item.get("name")) for item in items if item.get("name")))
+        if names:
+            shown = names[:2]
+            if len(shown) == 1:
+                return f"Im {room} gibt es heute {shown[0]}."
+            return f"Im {room} gibt es heute zum Beispiel {shown[0]} und {shown[1]}."
+        return f"Der {room} ist Teil des heutigen Programms."
 
     def _program_wide_response(self, program: list, text: str) -> str | None:
         """Beantwortet Fragen, die sich auf das gesamte Programm beziehen."""
@@ -854,7 +899,7 @@ Elfi:"""
                 return f"Die Veranstaltung findet im {location} statt."
         if self._contains_any(
             text,
-            ("was passiert hier", "was ist denn los", "was ist los", "was passiert heute", "was ist heute", "warum bin ich heute hier"),
+            ("was passiert hier", "was ist denn los", "was ist los", "was passiert heute", "was ist heute", "warum bin ich heute hier", "was erwartet mich", "was erwartet uns"),
         ):
             title = str(subtitle or name).rstrip(".!?")
             return self._choose_variant(
@@ -997,6 +1042,9 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
     def _classify(self, transcript: str) -> str:
         text = transcript.lower()
 
+        if self._find_person_mentioned(text):
+            return "artist"
+
         if self._find_artist(text):
             return "artist"
 
@@ -1031,6 +1079,8 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
         if self._contains_any(
             text,
             (
+                "was erwartet mich",
+                "was erwartet uns",
                 "was passiert heute",
                 "was passiert hier",
                 "was ist denn los",
@@ -1096,6 +1146,28 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             return "smalltalk"
 
         return "general"
+
+    def _find_person_mentioned(self, text: str) -> str | None:
+        program = self._read_assignment(
+            self.config_dir / "program.txt", variable_name="program"
+        )
+        if not isinstance(program, list):
+            return None
+        normalized_text = self._normalize_search_text(text)
+        for entry in program:
+            if not isinstance(entry, dict):
+                continue
+            for participant in entry.get("participants", []):
+                person = str(participant).strip()
+                normalized_person = self._normalize_search_text(person)
+                if normalized_person and re.search(
+                    rf"(?<!\w){re.escape(normalized_person)}(?!\w)", normalized_text
+                ):
+                    return person
+                first = normalized_person.split()[0] if normalized_person else ""
+                if first and re.search(rf"(?<!\w){re.escape(first)}(?!\w)", normalized_text):
+                    return person
+        return None
 
     def _context_for(
         self,

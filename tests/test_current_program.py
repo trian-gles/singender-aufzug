@@ -67,6 +67,30 @@ class CurrentProgramTests(unittest.TestCase):
     def test_program_entry_rooms_are_populated(self) -> None:
         self.assertTrue(all(entry.get("floor") and entry.get("room") for entry in self.program))
 
+    def test_find_person_uses_person_context_not_event_overview(self) -> None:
+        answer = self.router.direct_response("Wo finde ich Michel?")
+        self.assertIn("InnoLab", answer)
+        self.assertIn("zehnten Stock", answer)
+
+    def test_room_question_lists_program_for_room(self) -> None:
+        answer = self.router.direct_response("Was passiert heute im Production Lab?")
+        self.assertIn("Kunstformen der Natur", answer)
+        self.assertIn("Spatial Audio Listening Room", answer)
+
+    def test_room_question_for_haptic_lab_does_not_return_event_overview(self) -> None:
+        answer = self.router.direct_response("Was passiert heute im Haptic Lab?")
+        self.assertIn("Technik zum Anfassen", answer)
+
+    def test_event_preview_is_not_date_fragment(self) -> None:
+        answer = self.router.direct_response("Was erwartet mich heute?")
+        self.assertNotIn("5. Dezember", answer)
+        self.assertTrue("Labs" in answer or "Ausstellungen" in answer)
+
+    def test_subjective_favorite_does_not_return_event_fact(self) -> None:
+        answer = self.router.direct_response("Was ist dein Lieblingsprogrammpunkt?")
+        self.assertIn("bewerte", answer)
+        self.assertNotIn("Tag der offenen Tür", answer)
+
     def test_named_current_participant_is_confirmed(self) -> None:
         answer = self.router.direct_response("Ist Michel auch da?")
         self.assertIn("Ja, Michel Blümel", answer)
