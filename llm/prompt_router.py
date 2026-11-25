@@ -138,6 +138,13 @@ Elfi:"""
 
         if category == "orientation":
             if self._contains_any(
+                text, ("wo muss ich hin", "wohin muss ich", "wo soll ich hin")
+            ):
+                return "Das Programm findet im siebten, neunten und zehnten Stock statt."
+            floor_answer = self._floor_program_response(text)
+            if floor_answer:
+                return floor_answer
+            if self._contains_any(
                 text,
                 ("wo bin ich", "wo sind wir", "welcher ort ist das"),
             ):
@@ -325,6 +332,17 @@ Elfi:"""
         participants = entry.get("participants", [])
         description = entry.get("description")
         instruments = entry.get("instruments", [])
+        room = entry.get("room")
+        floor = entry.get("floor")
+
+        if self._contains_any(
+            text,
+            ("wo ist", "wo finde", "welchem stock", "welcher stock", "stockwerk", "wohin"),
+        ):
+            if room and floor:
+                return f"{name} ist im {room} im {floor}."
+            if floor:
+                return f"{name} ist im {floor}."
 
         if self._contains_any(
             text,
@@ -380,6 +398,10 @@ Elfi:"""
 
     def _program_wide_response(self, program: list, text: str) -> str | None:
         """Beantwortet Fragen, die sich auf das gesamte Programm beziehen."""
+
+        floor_answer = self._floor_program_response(text, program=program)
+        if floor_answer:
+            return floor_answer
 
         time_response = self._program_at_time_response(program, text)
         if time_response:
@@ -462,6 +484,57 @@ Elfi:"""
                 return f"Heute hörst du unter anderem {instrument_text}."
 
         return None
+
+    def _floor_program_response(
+        self,
+        text: str,
+        program: list | None = None,
+    ) -> str | None:
+        """Nennt wechselnde Beispiele für Programmpunkte auf einer Etage."""
+
+        normalized = self._normalize_search_text(text)
+        floor_match = re.search(
+            r"\b(?:im|auf dem|in|welchem|welcher)\s+"
+            r"(7|7ten|siebten|9|9ten|neunten|10|10ten|zehnten)\s+stock\b",
+            normalized,
+        )
+        if not floor_match:
+            return None
+
+        floor_alias = floor_match.group(1)
+        floor = (
+            "siebten Stock" if floor_alias in {"7", "7ten", "siebten"}
+            else "neunten Stock" if floor_alias in {"9", "9ten", "neunten"}
+            else "zehnten Stock"
+        )
+        if program is None:
+            program = self._read_assignment(
+                self.config_dir / "program.txt", variable_name="program"
+            )
+        if not isinstance(program, list):
+            return None
+
+        entries = [
+            entry for entry in program
+            if isinstance(entry, dict)
+            and self._normalize_search_text(str(entry.get("floor", ""))) ==
+            self._normalize_search_text(floor)
+            and entry.get("name")
+        ]
+        if not entries:
+            return None
+
+        key = f"floor:{floor}"
+        start = self.response_variants.get(key, 0)
+        self.response_variants[key] = start + 2
+        examples = [entries[(start + offset) % len(entries)] for offset in range(min(2, len(entries)))]
+        descriptions = [str(entry["name"]) for entry in examples]
+        if len(descriptions) == 1:
+            return f"Im {floor} gibt es zum Beispiel das Angebot {descriptions[0]}."
+        return (
+            f"Im {floor} findest du zum Beispiel {descriptions[0]} "
+            f"und {descriptions[1]}"
+        ) + "."
 
     def _program_at_time_response(self, program: list, text: str) -> str | None:
         """Findet den Act, der zu einer ausdrücklich genannten Uhrzeit läuft."""
@@ -931,6 +1004,9 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
             text,
             (
                 "wo fahren",
+                "wo muss ich hin",
+                "wohin muss ich",
+                "wo soll ich hin",
                 "wo bin ich",
                 "wo sind wir",
                 "welcher ort ist das",
@@ -1119,7 +1195,11 @@ Elfi darf leicht verspielt reagieren, erzählt aber keine langen Geschichten."""
         first_match = context.splitlines()[0]
         answer = first_match.split(": ", 1)[-1].strip()
         sentences = re.split(r"(?<=[.!?])\s+", answer)
-        return sentences[0].strip()
+        query = self._search_tokens(transcript)
+        return max(
+            sentences,
+            key=lambda sentence: len(query & self._search_tokens(sentence)),
+        ).strip()
 
     def _knowledge_definition_response(self, transcript: str) -> str:
         """Beantwortet „Was ist …?“-Fragen mit einer Definition statt dem Ort.

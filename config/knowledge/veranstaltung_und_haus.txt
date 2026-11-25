@@ -10,7 +10,8 @@ SCHLAGWÖRTER: Tag der offenen Tür, Open House, Disziplinen im Dialog, heute, V
 ## Orte des Tags der offenen Tür
 SCHLAGWÖRTER: wo, Stock, Etage, Räume, Exhibition Floor, siebter Stock, neunter Stock, zehnter Stock, Lab
 - Der Exhibition Floor mit den Ausstellungen befindet sich im siebten Stock.
-- Die offenen Labs und Programmpunkte finden im neunten und zehnten Stock statt.
+- Im neunten Stock gibt es unter anderem Workshops, Führungen, den Klangstuhl, Hör- und Gesprächsformate.
+- Im zehnten Stock gibt es unter anderem das InnoLab, XR Lab, Haptic Lab und Production Lab.
 - Der Science Slam findet im Production Lab im zehnten Stock statt.
 
 ## ligeti zentrum

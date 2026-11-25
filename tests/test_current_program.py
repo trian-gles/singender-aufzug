@@ -45,6 +45,28 @@ class CurrentProgramTests(unittest.TestCase):
     def test_old_music_night_artist_is_not_active(self) -> None:
         self.assertIsNone(self.router.direct_response("Wann spielt Guan Yanyi?"))
 
+    def test_where_should_i_go_mentions_all_program_floors(self) -> None:
+        answer = self.router.direct_response("Wo muss ich hin?")
+        self.assertIn("siebten", answer)
+        self.assertIn("neunten", answer)
+        self.assertIn("zehnten", answer)
+
+    def test_floor_questions_return_rotating_program_examples(self) -> None:
+        first = self.router.direct_response("Was ist im neunten Stock?")
+        second = self.router.direct_response("Was gibt es im neunten Stock?")
+        self.assertIn("neunten Stock", first)
+        self.assertIn("neunten Stock", second)
+        self.assertNotEqual(first, second)
+        self.assertIn("InnoLab", self.router.direct_response("Was gibt es im zehnten Stock?"))
+        self.assertIn("Moving Sound Pictures", self.router.direct_response("Was ist im siebten Stock?"))
+
+    def test_person_location_uses_program_floor(self) -> None:
+        answer = self.router.direct_response("In welchem Stockwerk ist Simon?")
+        self.assertIn("zehnten Stock", answer)
+
+    def test_program_entry_rooms_are_populated(self) -> None:
+        self.assertTrue(all(entry.get("floor") and entry.get("room") for entry in self.program))
+
     def test_named_current_participant_is_confirmed(self) -> None:
         answer = self.router.direct_response("Ist Michel auch da?")
         self.assertIn("Ja, Michel Blümel", answer)
