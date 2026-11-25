@@ -113,10 +113,21 @@ class CurrentProgramTests(unittest.TestCase):
         answer = self.router.direct_response("Hier stinkt es")
         self.assertIn("Team", answer)
 
-    def test_recommendation_question_is_not_answered_with_event_name(self) -> None:
-        answer = self.router.direct_response("Welcher Programmpunkt ist empfehlenswert?")
+    def test_recommendations_return_two_rotating_program_items(self) -> None:
+        first = self.router.direct_response("Welcher Programmpunkt ist empfehlenswert?")
+        second = self.router.direct_response("Was lohnt sich heute?")
+        self.assertEqual(len(first.removeprefix("Schau dir ").removesuffix(" an.").split(" und ")), 2)
+        self.assertEqual(len(second.removeprefix("Schau dir ").removesuffix(" an.").split(" und ")), 2)
+        self.assertNotEqual(first, second)
+        self.assertIn(first.removeprefix("Schau dir ").split(" und ")[0], {entry["name"] for entry in self.program})
+
+    def test_negative_recommendation_keeps_safe_neutral_response(self) -> None:
+        answer = self.router.direct_response("Welcher Programmpunkt ist am schlechtesten?")
         self.assertIn("bewerte", answer)
-        self.assertNotIn("Tag der offenen Tür", answer)
+
+    def test_best_program_item_uses_recommendation_path(self) -> None:
+        answer = self.router.direct_response("Was ist der beste Programmpunkt?")
+        self.assertTrue(answer.startswith("Schau dir "))
 
 
 if __name__ == "__main__":

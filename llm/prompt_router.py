@@ -124,13 +124,24 @@ Elfi:"""
         if self._contains_any(
             text,
             (
-                "schlechteste", "schlechtestes", "beste", "bestes",
+                "schlechteste", "schlechtestes", "schlechtesten", "schlecht",
+                "nicht empfehlenswert", "nicht empfehlenswerten",
                 "lieblingsangebot", "lieblingsprogrammpunkt", "lieblingsprogramm",
-                "dein lieblings", "deine lieblings", "empfiehlst du", "empfehlung",
-                "empfehlenswert", "was lohnt sich", "was soll ich besuchen",
+                "dein lieblings", "deine lieblings",
             ),
         ):
             return "Ich bewerte die Angebote nicht. Das Team hilft dir gern bei der Auswahl."
+
+        if self._contains_any(
+            text,
+            (
+                "empfehlenswert", "empfiehlst du", "empfehlung", "empfehlungen",
+                "was lohnt sich", "was lohnt sich besonders", "was soll ich besuchen",
+                "was würdest du besuchen", "was wuerdest du besuchen", "was sollte ich sehen",
+                "bester programmpunkt", "beste programmpunkt", "bestes angebot",
+            ),
+        ):
+            return self._random_program_recommendations(text)
 
         if self._contains_any(
             text,
@@ -588,6 +599,28 @@ Elfi:"""
             f"Im {floor} findest du zum Beispiel {descriptions[0]} "
             f"und {descriptions[1]}"
         ) + "."
+
+    def _random_program_recommendations(self, text: str) -> str:
+        """Wählt wechselnde Programmpunkte aus der aktiven Programmliste."""
+        program = self._read_assignment(
+            self.config_dir / "program.txt", variable_name="program"
+        )
+        if not isinstance(program, list):
+            return "Das Team gibt dir gern eine persönliche Empfehlung."
+
+        entries = [
+            entry for entry in program
+            if isinstance(entry, dict) and entry.get("name")
+        ]
+        if len(entries) < 2:
+            return "Das Team gibt dir gern eine persönliche Empfehlung."
+
+        key = "program:recommendation"
+        offset = self.response_variants.get(key, 0)
+        self.response_variants[key] = offset + 2
+        first = entries[offset % len(entries)]
+        second = entries[(offset + 1) % len(entries)]
+        return f"Schau dir {first['name']} und {second['name']} an."
 
     def _program_at_time_response(self, program: list, text: str) -> str | None:
         """Findet den Act, der zu einer ausdrücklich genannten Uhrzeit läuft."""
