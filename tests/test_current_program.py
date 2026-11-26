@@ -129,6 +129,27 @@ class CurrentProgramTests(unittest.TestCase):
         answer = self.router.direct_response("Was ist der beste Programmpunkt?")
         self.assertTrue(answer.startswith("Schau dir "))
 
+    def test_recommendation_synonym_with_today_uses_recommendation_path(self) -> None:
+        answer = self.router.direct_response("Was ist heute zu empfehlen?")
+        self.assertTrue(answer.startswith("Schau dir "))
+        self.assertEqual(
+            len(answer.removeprefix("Schau dir ").removesuffix(" an.").split(" und ")),
+            2,
+        )
+
+    def test_unknown_person_question_does_not_fall_back_to_event_date(self) -> None:
+        answer = self.router.direct_response("Was macht Georg Hajdu heute?")
+        self.assertIn("keine Programminformation", answer)
+
+    def test_unknown_person_biography_does_not_go_to_llm(self) -> None:
+        answer = self.router.direct_response("Wer ist Georg Hajdu?")
+        self.assertIn("keine Programminformation", answer)
+        self.assertNotIn("Komponist", answer)
+
+    def test_known_program_person_question_uses_context(self) -> None:
+        answer = self.router.direct_response("Was zeigt Jacob heute?")
+        self.assertIn("InnoLab", answer)
+
 
 if __name__ == "__main__":
     unittest.main()

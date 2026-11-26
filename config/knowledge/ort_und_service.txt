@@ -16,6 +16,21 @@ SCHLAGWÖRTER: Toilette, Toiletten, WC, Klo, Bad, Waschraum
 - Toiletten befinden sich auf jedem Stockwerk.
 - Die Toiletten sind nicht barrierefrei.
 
+## Barrierefreiheit
+SCHLAGWÖRTER: Barrierefreiheit, barrierefrei, Rollstuhl, Eingang, Eingänge, Aufzug, Aufzüge, Lift, zugänglich
+- Barrierefreie Eingänge und Aufzüge sind vorhanden.
+- Die Toiletten sind leider nicht barrierefrei.
+
+## Ausstattung und Unterstützung vor Ort
+SCHLAGWÖRTER: Garderobe, WLAN, Wi-Fi, Steckdose, Steckdosen, Strom, Hilfe, Team, Mitarbeitende, Ligeti-Shirt, T-Shirt
+- Eine Garderobe, WLAN und Steckdosen sind vorhanden. Bei Fragen dazu hilft dir das Team vor Ort.
+- Das Team erkennst du an den Shirts des ligeti zentrums. Sprich die Mitarbeitenden gern an.
+
+## Kuchen und Ernährung
+SCHLAGWÖRTER: Kuchen, Kuchenbüffet, Kuchenbuffet, Spende, vegan, Allergene, Allergien, Essen
+- Das Kuchenbüffet gibt es gegen Spende.
+- Für Auskunft zu Allergenen und veganen Optionen sprich bitte das Team vor Ort an.
+
 ## Notfall und Erste Hilfe
 SCHLAGWÖRTER: Notfall, Erste Hilfe, verletzt, Sanitäter, Feuer, Fluchtweg
 - Im Notfall bitte an die Mitarbeitenden wenden.

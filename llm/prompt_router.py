@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import re
 from difflib import SequenceMatcher
+from datetime import date, datetime
 from time import monotonic
 from pathlib import Path
 
@@ -25,7 +26,7 @@ UNKNOWN_RESPONSE = UNKNOWN_RESPONSES[0]
 KNOWLEDGE_STOPWORDS = {
     "aber", "alle", "auch", "auf", "aus", "bei", "das", "dass", "dem",
     "den", "der", "die", "ein", "eine", "einer", "einen", "einem", "es",
-    "für", "hat", "hier", "ich", "ihr", "ist", "man", "mit", "nach",
+    "für", "hat", "hier", "heute", "morgen", "gestern", "ich", "ihr", "ist", "man", "mit", "nach",
     "oder", "sich", "sind", "über", "und", "vom", "von", "was", "welche",
     "welcher", "welches", "wie", "wir", "wo", "zum", "zur", "etwas",
 }
@@ -132,12 +133,20 @@ Elfi:"""
         ):
             return "Ich bewerte die Angebote nicht. Das Team hilft dir gern bei der Auswahl."
 
+        requested_tags = self._requested_program_tags(text)
+        if requested_tags and not self._find_artist(text):
+            return self._random_program_recommendations(
+                text, required_tags=requested_tags
+            )
+
         if self._contains_any(
             text,
             (
                 "empfehlenswert", "empfiehlst du", "empfehlung", "empfehlungen",
+                "zu empfehlen", "empfehlen", "empfohlen",
                 "was lohnt sich", "was lohnt sich besonders", "was soll ich besuchen",
                 "was würdest du besuchen", "was wuerdest du besuchen", "was sollte ich sehen",
+                "was sollte ich mir ansehen", "was soll ich mir ansehen",
                 "bester programmpunkt", "beste programmpunkt", "bestes angebot",
             ),
         ):
@@ -153,6 +162,9 @@ Elfi:"""
         program_answer = self._program_direct_response(text)
         if program_answer:
             return program_answer
+
+        if self._asks_about_a_person(text) and not self._find_artist(text):
+            return "Dazu habe ich keine Programminformation. Frag bitte das Team."
 
         category = self._classify(text)
 
@@ -234,6 +246,8 @@ Elfi:"""
             knowledge_answer = self._knowledge_direct_response(text)
             if knowledge_answer:
                 return knowledge_answer
+            if self._asks_about_a_person(text):
+                return "Dazu habe ich keine Programminformation. Frag bitte das Team."
             return None
 
         return None
@@ -369,10 +383,12 @@ Elfi:"""
             text,
             ("wo ist", "wo finde", "welchem stock", "welcher stock", "stockwerk", "wohin"),
         ):
+            person = self._mentioned_participant(text, participants) if participants else ""
+            subject = person or name
             if room and floor:
-                return f"{name} ist im {room} im {floor}."
+                return f"{subject} findest du im {room} im {floor}."
             if floor:
-                return f"{name} ist im {floor}."
+                return f"{subject} findest du im {floor}."
 
         if self._contains_any(
             text,
@@ -398,6 +414,16 @@ Elfi:"""
 
         if self._contains_any(
             text,
+            ("kinder", "kindern", "familie", "familien", "familienfreundlich", "kindgerecht"),
+        ) and self._contains_any(
+            text, ("geeignet", "familienfreundlich", "kindgerecht", "für kinder", "mit kindern")
+        ):
+            if "family_friendly" in entry.get("tags", []):
+                return f"{name} ist im Programmfinder als familienfreundlich markiert."
+            return "Für diesen Programmpunkt ist kein Familienformat markiert. Frag bitte das Team nach der passenden Altersgruppe."
+
+        if self._contains_any(
+            text,
             ("welche musik", "was für musik", "genre", "musikrichtung", "was spielt"),
         ) and genre:
             return f"{name} spielt {genre}."
@@ -418,7 +444,7 @@ Elfi:"""
 
         if self._contains_any(
             text,
-            ("was macht", "erzähl", "erzaehl", "was ist", "wer ist", "mehr über", "mehr von"),
+            ("was macht", "was zeigt", "erzähl", "erzaehl", "was ist", "wer ist", "mehr über", "mehr von"),
         ):
             return self._short_program_description(name, genre, description, start)
 
@@ -600,7 +626,11 @@ Elfi:"""
             f"und {descriptions[1]}"
         ) + "."
 
-    def _random_program_recommendations(self, text: str) -> str:
+    def _random_program_recommendations(
+        self,
+        text: str,
+        required_tags: set[str] | None = None,
+    ) -> str:
         """Wählt wechselnde Programmpunkte aus der aktiven Programmliste."""
         program = self._read_assignment(
             self.config_dir / "program.txt", variable_name="program"
@@ -608,19 +638,133 @@ Elfi:"""
         if not isinstance(program, list):
             return "Das Team gibt dir gern eine persönliche Empfehlung."
 
-        entries = [
-            entry for entry in program
-            if isinstance(entry, dict) and entry.get("name")
-        ]
+        entries = self._upcoming_program_entries(program)
+        if entries is None:
+            return "Ich kann die Programmzeiten gerade nicht verlässlich prüfen. Frag bitte das Team."
+        if not entries:
+            return "Das Programm ist bereits vorbei. Frag bitte das Team nach dem aktuellen Angebot."
+        if required_tags:
+            entries = [
+                entry for entry in entries
+                if required_tags.issubset(set(entry.get("tags", [])))
+            ]
+            if not entries:
+                return "Dazu finde ich gerade kein passendes Angebot. Frag bitte das Team."
         if len(entries) < 2:
-            return "Das Team gibt dir gern eine persönliche Empfehlung."
+            name = entries[0].get("name")
+            return f"Schau dir {name} an." if name else "Das Team gibt dir gern eine persönliche Empfehlung."
 
-        key = "program:recommendation"
+        suffix = ":" + "+".join(sorted(required_tags)) if required_tags else ""
+        key = f"program:recommendation{suffix}"
         offset = self.response_variants.get(key, 0)
         self.response_variants[key] = offset + 2
         first = entries[offset % len(entries)]
         second = entries[(offset + 1) % len(entries)]
         return f"Schau dir {first['name']} und {second['name']} an."
+
+    @classmethod
+    def _requested_program_tags(cls, text: str) -> set[str] | None:
+        """Ordnet natürlich formulierte Interessen den Programm-Tags zu."""
+        asks_for_program = cls._contains_any(
+            text,
+            (
+                "was", "welche", "welcher", "welches", "gibt es", "empfehl",
+                "empfiehl", "lohnt sich", "programm für", "angebot für",
+            ),
+        )
+        if not asks_for_program:
+            return None
+
+        if cls._contains_any(
+            text,
+            ("kinder", "kindern", "familie", "familien", "familienfreundlich", "kindgerecht"),
+        ):
+            return {"family_friendly"}
+        if cls._contains_any(
+            text,
+            ("ausprobieren", "mitmachen", "selbst machen", "selbst ausprobieren", "hands on"),
+        ):
+            return {"hands_on"}
+        if cls._contains_any(text, ("ruhig", "entspannt", "leise", "besinnlich")):
+            return {"calm"}
+        if cls._contains_any(text, ("anhören", "anhoeren", "zuhören", "zuhören", "zum hören", "zum hoeren")):
+            return {"listening"}
+        return None
+
+    def _upcoming_program_entries(self, program: list) -> list[dict] | None:
+        """Filtert vergangene Programmpunkte nach Eventdatum und lokaler Uhr."""
+        event = self._read_assignment(
+            self.config_dir / "event.txt", variable_name="event"
+        )
+        event_date = self._parse_event_date(event.get("date")) if isinstance(event, dict) else None
+        now = self._local_now()
+        if event_date is None or now.year < event_date.year - 1:
+            # Ohne plausibles Datum kann Elfi nicht sicher erkennen, was vorbei ist.
+            return None
+        if now.date() > event_date:
+            return []
+
+        entries = [
+            entry for entry in program
+            if isinstance(entry, dict) and entry.get("name")
+            and self._program_entry_is_upcoming(entry, now, event_date)
+        ]
+        return entries
+
+    @staticmethod
+    def _local_now() -> datetime:
+        """Liest die lokale Systemzeit (auch ohne Internetverbindung)."""
+        return datetime.now().astimezone()
+
+    @staticmethod
+    def _parse_event_date(value: object) -> date | None:
+        if not isinstance(value, str):
+            return None
+        normalized = value.strip().casefold()
+        for month, number in (
+            ("januar", 1), ("februar", 2), ("märz", 3), ("maerz", 3),
+            ("april", 4), ("mai", 5), ("juni", 6), ("juli", 7),
+            ("august", 8), ("september", 9), ("oktober", 10),
+            ("november", 11), ("dezember", 12),
+        ):
+            match = re.fullmatch(rf"(\d{{1,2}})\.\s*{month}\s+(\d{{4}})", normalized)
+            if match:
+                try:
+                    return datetime(int(match.group(2)), number, int(match.group(1))).date()
+                except ValueError:
+                    return None
+        try:
+            return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    @classmethod
+    def _program_entry_is_upcoming(
+        cls,
+        entry: dict,
+        now: datetime,
+        event_date: date,
+    ) -> bool:
+        start = cls._minutes_after_midnight(entry.get("start"))
+        end = cls._minutes_after_midnight(entry.get("end"))
+        if start is None or end is None:
+            return False
+        if now.date() < event_date:
+            return True
+        now_minutes = now.hour * 60 + now.minute
+        return end > now_minutes
+
+    @staticmethod
+    def _minutes_after_midnight(value: object) -> int | None:
+        if not isinstance(value, str):
+            return None
+        match = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+        if not match:
+            return None
+        hour, minute = map(int, match.groups())
+        if hour > 23 or minute > 59:
+            return None
+        return hour * 60 + minute
 
     def _program_at_time_response(self, program: list, text: str) -> str | None:
         """Findet den Act, der zu einer ausdrücklich genannten Uhrzeit läuft."""
@@ -791,6 +935,24 @@ Elfi:"""
             return True
         return "künstler" in text and "heißt" in text
 
+    @staticmethod
+    def _asks_about_a_person(text: str) -> bool:
+        """Erkennt unbelegte Personenfragen, damit das LLM nichts erfindet."""
+        match = (
+            re.search(r"\bwer\s+ist\s+([\wäöüß-]+)", text)
+            or re.search(r"\bwas\s+(?:macht|zeigt)\s+([\wäöüß-]+)", text)
+            or re.search(r"\bwo\s+finde\s+ich\s+([\wäöüß-]+)", text)
+        )
+        if not match:
+            return False
+        non_person_subjects = {
+            "man", "jemand", "du", "ihr", "wir", "uns", "es", "das",
+            "hier", "dort", "da", "heute", "morgen", "am", "im", "beim",
+            "bei", "zum", "zur", "programm", "angebot", "veranstaltung",
+            "was", "alles", "los", "kuchen", "toilette", "wc", "klo",
+        }
+        return match.group(1).casefold() not in non_person_subjects
+
     def _mentioned_participant(
         self,
         text: str,
@@ -940,7 +1102,16 @@ Elfi:"""
                 return f"Die Veranstaltung findet im {location} statt."
         if self._contains_any(
             text,
-            ("was passiert hier", "was ist denn los", "was ist los", "was passiert heute", "was ist heute", "warum bin ich heute hier", "was erwartet mich", "was erwartet uns"),
+            (
+                "was passiert hier", "was ist denn los", "was ist los",
+                "was passiert heute", "was läuft heute", "was laeuft heute",
+                "was steht heute an", "was ist heute geboten", "was gibt es heute",
+                "was gibt es heute zu sehen", "was kann ich heute machen",
+                "was kann man heute machen", "was kann ich hier erleben",
+                "was kann man hier erleben", "was passiert am tag der offenen tür",
+                "was passiert am tag der offenen tuer", "was ist heute",
+                "warum bin ich heute hier", "was erwartet mich", "was erwartet uns",
+            ),
         ):
             title = str(subtitle or name).rstrip(".!?")
             return self._choose_variant(
@@ -1124,6 +1295,15 @@ Du reagierst immer auf die konkrete Frage oder Äußerung."""
                 "was erwartet uns",
                 "was passiert heute",
                 "was passiert hier",
+                "was läuft heute",
+                "was laeuft heute",
+                "was steht heute an",
+                "was ist heute geboten",
+                "was gibt es heute",
+                "was kann ich heute machen",
+                "was kann man heute machen",
+                "was kann ich hier erleben",
+                "was kann man hier erleben",
                 "was ist denn los",
                 "was ist los",
                 "warum bin ich heute hier",
